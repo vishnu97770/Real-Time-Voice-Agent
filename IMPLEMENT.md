@@ -117,6 +117,8 @@ Definition of done: a user can interrupt speech and receive a new response withi
 
 ### Phase 10: Underwriting Data Foundation
 
+Status: In-memory application workflow implemented; persistence and authorization pending.
+
 Add application creation, application IDs, document metadata, upload state, processing state, audit events, and the application state machine: DRAFT, DOCUMENTS_UPLOADED, PROCESSING, ANALYSIS_READY, UNDER_REVIEW, DECIDED, and PROCESSING_FAILED.
 
 Definition of done: application state transitions are validated and auditable.

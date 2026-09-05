@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 import json
 from time import perf_counter
 from uuid import uuid4
 import logging
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
@@ -15,6 +16,7 @@ from app.tts import UnavailableTTS
 from app.pipeline import VoicePipeline
 from app.vad import UnavailableVAD
 from app.realtime import SessionManager, SessionState, parse_client_message
+from app.underwriting import ApplicationState, ApplicationStore, DocumentMetadata, application_dict
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -25,6 +27,7 @@ agent = UnavailableAgent()
 tts = UnavailableTTS()
 vad = UnavailableVAD()
 pipeline = VoicePipeline(asr, agent, tts, vad)
+application_store = ApplicationStore()
 
 
 @asynccontextmanager
@@ -39,7 +42,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.allowed_origins),
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
     expose_headers=["X-Correlation-ID"],
 )
@@ -64,6 +67,63 @@ async def root() -> dict[str, str]:
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": settings.app_name, "version": "0.1.0"}
+
+
+@app.post("/applications", status_code=status.HTTP_201_CREATED)
+async def create_application(payload: dict) -> dict:
+    applicant_name = payload.get("applicant_name")
+    if not isinstance(applicant_name, str) or not applicant_name.strip():
+        raise HTTPException(status_code=422, detail="applicant_name is required")
+    return application_dict(application_store.create(applicant_name))
+
+
+@app.get("/applications/{application_id}")
+async def get_application(application_id: str) -> dict:
+    application = application_store.get(application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="application not found")
+    return application_dict(application)
+
+
+@app.post("/applications/{application_id}/documents", status_code=status.HTTP_201_CREATED)
+async def register_document(application_id: str, payload: dict) -> dict:
+    try:
+        document = DocumentMetadata(
+            document_id=str(uuid4()),
+            filename=str(payload.get("filename", "")),
+            content_type=str(payload.get("content_type", "application/octet-stream")),
+            size_bytes=int(payload.get("size_bytes", 0)),
+            uploaded_at=datetime.now(timezone.utc).isoformat(),
+        )
+        if not document.filename or document.size_bytes < 0:
+            raise ValueError("filename and non-negative size_bytes are required")
+        return application_dict(application_store.add_document(application_id, document))
+    except KeyError:
+        raise HTTPException(status_code=404, detail="application not found")
+    except (TypeError, ValueError) as error:
+        raise HTTPException(status_code=422, detail=str(error))
+
+
+@app.post("/applications/{application_id}/state")
+async def transition_application(application_id: str, payload: dict) -> dict:
+    try:
+        target = ApplicationState(payload.get("state"))
+        return application_dict(application_store.transition(application_id, target))
+    except KeyError:
+        raise HTTPException(status_code=404, detail="application not found")
+    except (TypeError, ValueError) as error:
+        raise HTTPException(status_code=409, detail=str(error))
+
+
+@app.get("/applications/{application_id}/audit")
+async def get_application_audit(application_id: str) -> list[dict]:
+    try:
+        return [event.__dict__ if hasattr(event, "__dict__") else {
+            "event_id": event.event_id, "application_id": event.application_id,
+            "event_type": event.event_type, "detail": event.detail, "created_at": event.created_at,
+        } for event in application_store.audit(application_id)]
+    except KeyError:
+        raise HTTPException(status_code=404, detail="application not found")
 
 
 @app.websocket("/ws/voice")

@@ -141,3 +141,29 @@ def test_pipeline_cancels_response_after_barge_in():
     events = asyncio.run(scenario())
     assert events[0].kind == "response.cancelled"
     assert events[0].detail == "response interrupted"
+
+
+
+def test_application_workflow_validates_state_and_records_audit():
+    response = client.post("/applications", json={"applicant_name": "Acme Ltd"})
+    assert response.status_code == 201
+    application = response.json()
+    application_id = application["application_id"]
+    assert application["state"] == "DRAFT"
+
+    document = client.post(f"/applications/{application_id}/documents", json={"filename": "annual-report.pdf", "content_type": "application/pdf", "size_bytes": 128})
+    assert document.status_code == 201
+    assert document.json()["state"] == "DOCUMENTS_UPLOADED"
+
+    invalid = client.post(f"/applications/{application_id}/state", json={"state": "DECIDED"})
+    assert invalid.status_code == 409
+
+    for state in ["PROCESSING", "ANALYSIS_READY", "UNDER_REVIEW", "DECIDED"]:
+        assert client.post(f"/applications/{application_id}/state", json={"state": state}).status_code == 200
+    audit = client.get(f"/applications/{application_id}/audit")
+    assert audit.status_code == 200
+    assert any(event["event_type"] == "application.state_changed" for event in audit.json())
+
+
+def test_unknown_application_returns_not_found():
+    assert client.get("/applications/missing").status_code == 404
