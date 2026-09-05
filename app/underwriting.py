@@ -43,12 +43,25 @@ class DocumentMetadata:
     uploaded_at: str
 
 
+@dataclass(frozen=True, slots=True)
+class ExtractedValue:
+    value_id: str
+    field_name: str
+    value: str | int | float | bool | None
+    source_document_id: str
+    page: int
+    source_context: str
+    confidence: float
+    extracted_at: str
+
+
 @dataclass(slots=True)
 class Application:
     application_id: str
     applicant_name: str
     state: ApplicationState = ApplicationState.DRAFT
     documents: list[DocumentMetadata] = field(default_factory=list)
+    extracted_values: list[ExtractedValue] = field(default_factory=list)
 
 
 class ApplicationStore:
@@ -73,6 +86,17 @@ class ApplicationStore:
             self.transition(application_id, ApplicationState.DOCUMENTS_UPLOADED)
         self._record(application_id, "document.registered", document.filename)
         return application
+
+    def add_extracted_value(self, application_id: str, value: ExtractedValue) -> Application:
+        application = self._require(application_id)
+        if not any(document.document_id == value.source_document_id for document in application.documents):
+            raise ValueError("source document is not registered for this application")
+        application.extracted_values.append(value)
+        self._record(application_id, "value.extracted", f"{value.field_name} from page {value.page}")
+        return application
+
+    def extracted_values(self, application_id: str) -> list[ExtractedValue]:
+        return list(self._require(application_id).extracted_values)
 
     def transition(self, application_id: str, target: ApplicationState) -> Application:
         application = self._require(application_id)

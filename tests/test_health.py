@@ -167,3 +167,37 @@ def test_application_workflow_validates_state_and_records_audit():
 
 def test_unknown_application_returns_not_found():
     assert client.get("/applications/missing").status_code == 404
+
+
+
+def test_extracted_values_require_document_provenance_and_confidence():
+    response = client.post("/applications", json={"applicant_name": "Evidence Co"})
+    application_id = response.json()["application_id"]
+    missing_document = client.post(f"/applications/{application_id}/extracted-values", json={"field_name": "revenue", "value": 100, "source_document_id": "missing", "page": 1, "confidence": 0.9})
+    assert missing_document.status_code == 404
+
+    document = client.post(f"/applications/{application_id}/documents", json={"filename": "statement.pdf", "size_bytes": 20}).json()
+    document_id = document["documents"][0]["document_id"]
+    invalid_confidence = client.post(f"/applications/{application_id}/extracted-values", json={"field_name": "revenue", "value": 100, "source_document_id": document_id, "page": 1, "confidence": 1.5})
+    assert invalid_confidence.status_code == 422
+
+    extracted = client.post(f"/applications/{application_id}/extracted-values", json={"field_name": "revenue", "value": 100, "source_document_id": document_id, "page": 2, "source_context": "income table", "confidence": 0.94})
+    assert extracted.status_code == 201
+    values = client.get(f"/applications/{application_id}/extracted-values")
+    assert values.json()[0]["source_context"] == "income table"
+    assert values.json()[0]["confidence"] == 0.94
+
+
+
+def test_financial_analysis_calculates_only_grounded_ratios():
+    response = client.post("/applications", json={"applicant_name": "Metrics Co"})
+    application_id = response.json()["application_id"]
+    document = client.post(f"/applications/{application_id}/documents", json={"filename": "financials.pdf", "size_bytes": 100}).json()
+    document_id = document["documents"][0]["document_id"]
+    for field_name, value in [("revenue", 1000), ("net_income", 100), ("total_debt", 500)]:
+        assert client.post(f"/applications/{application_id}/extracted-values", json={"field_name": field_name, "value": value, "source_document_id": document_id, "page": 1, "confidence": 0.9}).status_code == 201
+    analysis = client.get(f"/applications/{application_id}/financial-analysis")
+    assert analysis.status_code == 200
+    assert {metric["name"] for metric in analysis.json()["metrics"]} == {"profit_margin", "debt_to_revenue"}
+    assert analysis.json()["missing_fields"] == ["current_assets", "current_liabilities"]
+    assert analysis.json()["metrics"][0]["source_value_ids"]

@@ -4,9 +4,9 @@ This file is the implementation map for the Real-Time Voice and Credit Underwrit
 
 ## Current Status
 
-- Completed: Phase 0 discovery, Phases 1-3 foundations, and Phases 4-6 provider-neutral boundaries
-- Active next slice: Phase 7 first complete voice agent
-- Planned provider integrations: ASR, LLM, and TTS
+- Completed: Phases 0-3 foundations, Phases 4-6 adapter boundaries, Phase 7 pipeline, Phases 8-9 VAD/barge-in boundaries, and Phases 10-12 underwriting foundations
+- Active next slice: Phase 13 ML risk prediction
+- Planned provider integrations: ASR, LLM, TTS, OCR, and persistence
 - Verified tests: 5 passing
 
 The first three phases provide a working API, a browser shell, a WebSocket session, lifecycle messages, and browser microphone chunks. They do not yet provide transcription, an LLM, TTS, underwriting data, or telephony.
@@ -125,11 +125,15 @@ Definition of done: application state transitions are validated and auditable.
 
 ### Phase 11: Document Extraction
 
+Status: Provenance-aware extracted-value storage implemented; OCR/provider integration pending.
+
 Add document storage boundaries, OCR or extraction adapter, structured values, provenance, page/table references, confidence, and untrusted-document handling.
 
 Definition of done: extracted facts always retain their source and confidence.
 
 ### Phase 12: Financial Analysis
+
+Status: Deterministic grounded ratio calculations implemented; broader analysis pending.
 
 Implement deterministic financial calculations, ratios, risk indicators, and separation between extracted facts, calculated values, and interpretations.
 
