@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Voice Underwriting Workspace</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <p class="eyebrow">REAL-TIME CREDIT WORKSPACE</p>
+      <h1>Underwriting, with a voice.</h1>
+      <p class="lede">The workspace foundation is ready. Voice transport and underwriting context arrive in the next vertical slices.</p>
+      <section class="status-card" aria-live="polite">
+        <span class="status-dot" id="status-dot"></span>
+        <div>
+          <p class="status-label">Backend status</p>
+          <p id="status-text">Checking connection...</p>
+        </div>
+      </section>
+      <div class="controls"><button id="connect-button" type="button">Connect voice session</button><button id="mic-button" type="button" disabled>Start microphone</button></div>
+      <p class="fine-print" id="session-text">Transport is idle.</p>
+      <p class="fine-print" id="version-text"></p>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
