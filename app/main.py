@@ -9,12 +9,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.logging import configure_logging
+from app.asr import UnavailableASR
+from app.agent import UnavailableAgent
+from app.tts import UnavailableTTS
 from app.realtime import SessionManager, SessionState, parse_client_message
 
 settings = get_settings()
 configure_logging(settings.log_level)
 logger = logging.getLogger("voice-agent.api")
 session_manager = SessionManager()
+asr = UnavailableASR()
+agent = UnavailableAgent()
+tts = UnavailableTTS()
 
 
 @asynccontextmanager
@@ -61,7 +67,7 @@ async def voice_session(websocket: WebSocket) -> None:
     await websocket.accept()
     session = session_manager.create()
     session_manager.transition(session, SessionState.LISTENING)
-    await websocket.send_json({"type": "session.ready", "session_id": session.session_id, "state": session.state, "connected_at": session.connected_at})
+    await websocket.send_json({"type": "session.ready", "session_id": session.session_id, "state": session.state, "connected_at": session.connected_at, "capabilities": {"asr": asr.provider if asr.available else "unavailable", "agent": agent.provider if agent.available else "unavailable", "tts": tts.provider if tts.available else "unavailable"}})
     try:
         while True:
             message = await websocket.receive()

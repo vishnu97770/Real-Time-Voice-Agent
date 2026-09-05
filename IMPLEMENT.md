@@ -4,9 +4,9 @@ This file is the implementation map for the Real-Time Voice and Credit Underwrit
 
 ## Current Status
 
-- Completed: Phase 0 discovery, Phase 1 foundation, Phase 2 real-time transport, Phase 3 microphone transport
-- Active next slice: Phase 4 streaming ASR
-- Planned: Phases 5 through 28
+- Completed: Phase 0 discovery, Phases 1-3 foundations, and Phases 4-6 provider-neutral boundaries
+- Active next slice: Phase 7 first complete voice agent
+- Planned provider integrations: ASR, LLM, and TTS
 - Verified tests: 5 passing
 
 The first three phases provide a working API, a browser shell, a WebSocket session, lifecycle messages, and browser microphone chunks. They do not yet provide transcription, an LLM, TTS, underwriting data, or telephony.
@@ -69,7 +69,7 @@ Limitation: browser-selected compressed media is not yet the provider-specific P
 
 ### Phase 4: Streaming ASR
 
-Status: Next.
+Status: Boundary implemented; provider integration pending.
 
 Select one streaming ASR adapter after comparing latency, browser/server media requirements, language support, privacy, and credentials. Define an adapter interface, session association, partial transcripts, final transcripts, timeout handling, and provider failure states.
 
@@ -77,11 +77,15 @@ Definition of done: a real microphone utterance produces partial and final trans
 
 ### Phase 5: LLM and Agent Orchestration
 
+Status: Boundary implemented; provider integration pending.
+
 Implement a provider-neutral conversational agent interface, system prompt, session context, user message handling, streaming response events, cancellation, timeouts, and safe error messages.
 
 Definition of done: transcript input produces a streamed text response with no underwriting claims.
 
 ### Phase 6: Streaming TTS
+
+Status: Boundary implemented; provider integration pending.
 
 Implement a TTS adapter interface, text chunking, audio chunk streaming, playback events, cancellation, and provider error handling.
 

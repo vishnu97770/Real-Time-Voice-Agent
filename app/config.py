@@ -12,6 +12,7 @@ class Settings:
     environment: str
     log_level: str
     allowed_origins: tuple[str, ...]
+    asr_provider: str
 
 
 def get_settings() -> Settings:
@@ -20,4 +21,5 @@ def get_settings() -> Settings:
         environment=os.getenv("APP_ENV", "development"),
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         allowed_origins=_origins(os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:8000")),
+        asr_provider=os.getenv("ASR_PROVIDER", "none"),
     )
