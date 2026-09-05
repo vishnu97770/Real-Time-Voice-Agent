@@ -13,6 +13,7 @@ from app.asr import UnavailableASR
 from app.agent import UnavailableAgent
 from app.tts import UnavailableTTS
 from app.pipeline import VoicePipeline
+from app.vad import UnavailableVAD
 from app.realtime import SessionManager, SessionState, parse_client_message
 
 settings = get_settings()
@@ -22,7 +23,8 @@ session_manager = SessionManager()
 asr = UnavailableASR()
 agent = UnavailableAgent()
 tts = UnavailableTTS()
-pipeline = VoicePipeline(asr, agent, tts)
+vad = UnavailableVAD()
+pipeline = VoicePipeline(asr, agent, tts, vad)
 
 
 @asynccontextmanager
@@ -70,7 +72,7 @@ async def voice_session(websocket: WebSocket) -> None:
     session = session_manager.create()
     session_manager.transition(session, SessionState.LISTENING)
     await pipeline.start(session.session_id)
-    await websocket.send_json({"type": "session.ready", "session_id": session.session_id, "state": session.state, "connected_at": session.connected_at, "capabilities": {"asr": asr.provider if asr.available else "unavailable", "agent": agent.provider if agent.available else "unavailable", "tts": tts.provider if tts.available else "unavailable"}})
+    await websocket.send_json({"type": "session.ready", "session_id": session.session_id, "state": session.state, "connected_at": session.connected_at, "capabilities": {"asr": asr.provider if asr.available else "unavailable", "agent": agent.provider if agent.available else "unavailable", "tts": tts.provider if tts.available else "unavailable", "vad": vad.provider if vad.available else "unavailable"}})
     try:
         while True:
             message = await websocket.receive()
@@ -104,6 +106,7 @@ async def voice_session(websocket: WebSocket) -> None:
                 for event in await pipeline.handle_text(session.session_id, content or ""):
                     await websocket.send_json({"type": event.kind, "session_id": event.session_id, "text": event.text, "detail": event.detail})
             elif message_type == "interrupt":
+                pipeline.interrupt(session.session_id)
                 session_manager.transition(session, SessionState.INTERRUPTED)
                 await websocket.send_json({"type": "session.state", "session_id": session.session_id, "state": session.state})
                 session_manager.transition(session, SessionState.LISTENING)

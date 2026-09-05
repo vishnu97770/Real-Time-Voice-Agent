@@ -101,11 +101,15 @@ Definition of done: a user can speak and hear a basic conversational response.
 
 ### Phase 8: VAD and Turn Detection
 
+Status: Adapter boundary implemented; audio-format-specific detector pending.
+
 Add voice activity detection, speech start/end events, turn state, silence thresholds, and semantic turn signals where justified. Measure false starts and missed turns.
 
 Definition of done: speech turns are detected reliably in supported audio conditions.
 
 ### Phase 9: Full Duplex and Barge-In
+
+Status: Response cancellation boundary implemented; full duplex playback pending.
 
 Add simultaneous input/output, response cancellation, audio flushing, interruption priority, race protection, and interruption metrics.
 

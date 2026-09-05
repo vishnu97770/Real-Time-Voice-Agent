@@ -26,7 +26,7 @@ def test_voice_session_has_lifecycle_and_text_transport():
         assert ready["type"] == "session.ready"
         assert ready["state"] == "LISTENING"
         assert ready["session_id"]
-        assert ready["capabilities"] == {"asr": "unavailable", "agent": "unavailable", "tts": "unavailable"}
+        assert ready["capabilities"] == {"asr": "unavailable", "agent": "unavailable", "tts": "unavailable", "vad": "unavailable"}
         websocket.send_json({"type": "text", "content": "hello"})
         received = websocket.receive_json()
         state = websocket.receive_json()
@@ -114,3 +114,30 @@ def test_voice_pipeline_connects_final_transcript_to_agent_and_tts():
     assert [event.kind for event in events] == ["transcript.final", "agent.complete", "tts.audio.chunk", "tts.complete"]
     assert events[0].text == "hello"
     assert events[2].audio == b"audio"
+
+
+
+def test_pipeline_cancels_response_after_barge_in():
+    import asyncio
+    from app.agent import AgentEvent, AgentEventType
+    from app.asr import UnavailableASR
+    from app.pipeline import VoicePipeline
+    from app.tts import UnavailableTTS
+
+    class SlowAgent:
+        provider = "test"
+        available = True
+        async def respond(self, request):
+            await asyncio.sleep(0.02)
+            return (AgentEvent(AgentEventType.COMPLETE, request.session_id, text="late response"),)
+
+    async def scenario():
+        pipeline = VoicePipeline(UnavailableASR(), SlowAgent(), UnavailableTTS())
+        task = asyncio.create_task(pipeline.handle_text("session-1", "hello"))
+        await asyncio.sleep(0)
+        pipeline.interrupt("session-1")
+        return await task
+
+    events = asyncio.run(scenario())
+    assert events[0].kind == "response.cancelled"
+    assert events[0].detail == "response interrupted"
