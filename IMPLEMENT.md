@@ -93,6 +93,8 @@ Definition of done: a real agent response is spoken in the browser when credenti
 
 ### Phase 7: First Complete Voice Agent
 
+Status: Pipeline orchestration implemented; real provider integration pending.
+
 Connect microphone, transport, ASR, agent, TTS, and browser playback into one minimal conversation. Add session-level tracing and a runtime smoke test.
 
 Definition of done: a user can speak and hear a basic conversational response.
