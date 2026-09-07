@@ -20,10 +20,26 @@ const mockResponses = [
 ];
 
 function App() {
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("voice-agent-theme") || "light"
+  );
+
   const [callState, setCallState] = useState("idle");
   const [duration, setDuration] = useState(0);
   const [messages, setMessages] = useState(mockResponses);
   const timerRef = useRef(null);
+
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("voice-agent-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((currentTheme)=> 
+      currentTheme === "light" ?"dark":"light"
+    );
+  };
 
   useEffect(() => {
     if (callState === "listening" || callState === "speaking") {
@@ -103,7 +119,10 @@ function App() {
 
   return (
     <div className="voice-app">
-      <TopNavbar />
+      <TopNavbar 
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
 
       <div className="voice-layout">
         <Sidebar callState={callState} />

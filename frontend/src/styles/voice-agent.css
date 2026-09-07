@@ -1,3 +1,15 @@
+/* =========================================================
+   REAL-TIME VOICE AGENT
+   CREDIT UNDERWRITING WORKSPACE
+   Light + Dark Theme
+   Primary: #52AB98
+   ========================================================= */
+
+
+/* =========================================================
+   THEME VARIABLES
+   ========================================================= */
+
 :root {
   --primary: #52ab98;
   --primary-dark: #398f7e;
@@ -5,22 +17,88 @@
   --primary-soft: #f4fbf9;
 
   --text: #17212b;
+  --text-secondary: #40515a;
   --muted: #68757f;
 
   --border: #dfe8e5;
-  --background: #ffffff;
+  --border-strong: #cbdad6;
+
+  --background: #f8fbfa;
   --panel: #ffffff;
+  --surface: #fbfdfc;
+
+  --input-bg: #f4fbf9;
+  --transcript-bg: #fbfdfc;
+  --summary-box-bg: #fbfdfc;
 
   --danger: #e35d6a;
+  --danger-bg: #fff2f3;
+  --danger-border: #f3c8cd;
+
   --success: #2d9b63;
+  --success-bg: #e9f8ef;
+
+  --shadow: 0 1px 3px rgba(23, 33, 43, 0.04);
+
+  --transition: 0.2s ease;
 }
+
+
+/* =========================================================
+   DARK THEME
+   ========================================================= */
+
+[data-theme="dark"] {
+  --primary: #52ab98;
+  --primary-dark: #73c7b5;
+
+  --primary-light: #173d36;
+  --primary-soft: #102a26;
+
+  --text: #edf7f4;
+  --text-secondary: #c3d2ce;
+  --muted: #9eafaa;
+
+  --border: #29433e;
+  --border-strong: #3a5b54;
+
+  --background: #0d1715;
+  --panel: #13211e;
+  --surface: #10201d;
+
+  --input-bg: #172a26;
+  --transcript-bg: #10201d;
+  --summary-box-bg: #172a26;
+
+  --danger: #f07b86;
+  --danger-bg: #351b20;
+  --danger-border: #63333a;
+
+  --success: #55c98a;
+  --success-bg: #173426;
+
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+
+/* =========================================================
+   GLOBAL RESET
+   ========================================================= */
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  min-height: 100%;
+  background: var(--background);
+}
+
 body {
   margin: 0;
+
+  min-height: 100vh;
+
   font-family:
     Inter,
     ui-sans-serif,
@@ -30,8 +108,12 @@ body {
     "Segoe UI",
     sans-serif;
 
-  background: #f8fbfa;
+  background: var(--background);
   color: var(--text);
+
+  transition:
+    background-color var(--transition),
+    color var(--transition);
 }
 
 button {
@@ -39,26 +121,51 @@ button {
   cursor: pointer;
 }
 
-.voice-app {
-  min-height: 100vh;
-  background: #f8fbfa;
+button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
+
 /* =========================================================
-   NAVBAR
+   MAIN APPLICATION
+   ========================================================= */
+
+.voice-app {
+  min-height: 100vh;
+
+  background: var(--background);
+  color: var(--text);
+
+  transition:
+    background-color var(--transition),
+    color var(--transition);
+}
+
+
+/* =========================================================
+   TOP NAVBAR
    ========================================================= */
 
 .top-navbar {
   height: 88px;
-  background: white;
-  border-bottom: 1px solid var(--border);
 
   display: flex;
   align-items: center;
   justify-content: space-between;
 
   padding: 0 32px;
+
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
 }
+
+
+/* Brand */
 
 .brand {
   display: flex;
@@ -70,137 +177,278 @@ button {
   width: 48px;
   height: 48px;
 
-  border-radius: 14px;
-
-  background: var(--primary);
-  color: white;
-
   display: grid;
   place-items: center;
 
+  border-radius: 14px;
+
+  background: var(--primary);
+  color: #ffffff;
+
   font-weight: 800;
   font-size: 15px;
+
+  flex-shrink: 0;
 }
 
 .brand h1 {
   margin: 0;
+
+  color: var(--text);
+
   font-size: 22px;
   font-weight: 700;
+
+  letter-spacing: -0.3px;
 }
 
 .brand p {
   margin: 3px 0 0;
+
   color: var(--muted);
+
   font-size: 14px;
 }
+
+
+/* Navbar right */
 
 .navbar-right {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 20px;
 }
 
 .online-status {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  color: var(--text);
+
   font-size: 14px;
 }
 
 .online-dot {
   width: 9px;
   height: 9px;
-  border-radius: 50%;
-  background: #27ae60;
+
   display: inline-block;
+
+  border-radius: 50%;
+
+  background: #27ae60;
+  flex-shrink: 0;
 }
 
+
+/* Notification */
+
 .icon-button {
+  width: 36px;
+  height: 36px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+
   border: 0;
+  border-radius: 8px;
+
   background: transparent;
   color: var(--text);
+
+  transition: background-color var(--transition);
 }
+
+.icon-button:hover {
+  background: var(--primary-soft);
+}
+
+
+/* Profile */
 
 .profile {
   display: flex;
   align-items: center;
   gap: 10px;
+
+  color: var(--text);
+
+  font-size: 14px;
 }
 
 .avatar {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
 
   display: grid;
   place-items: center;
 
+  border-radius: 50%;
+
   background: var(--primary);
-  color: white;
+  color: #ffffff;
 
   font-weight: 700;
 }
 
 .dropdown {
+  color: var(--muted);
   font-size: 18px;
 }
 
+
 /* =========================================================
-   LAYOUT
+   THEME TOGGLE
+   ========================================================= */
+
+.theme-toggle {
+  width: 68px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 3px;
+
+  border: 1px solid var(--border);
+  border-radius: 999px;
+
+  background: var(--primary-soft);
+  color: var(--muted);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
+}
+
+.theme-toggle:hover {
+  border-color: var(--primary);
+}
+
+.theme-icon {
+  width: 27px;
+  height: 27px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  color: var(--muted);
+
+  font-size: 15px;
+
+  transition:
+    background-color var(--transition),
+    color var(--transition);
+}
+
+.theme-icon.active {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   MAIN LAYOUT
    ========================================================= */
 
 .voice-layout {
+  min-height: calc(100vh - 88px);
+
   display: grid;
-  grid-template-columns: 250px 1fr;
+  grid-template-columns: 250px minmax(0, 1fr);
   gap: 14px;
 
   padding: 16px;
-  min-height: calc(100vh - 88px);
+
+  background: var(--background);
 }
 
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
 .sidebar {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  min-height: calc(100vh - 120px);
 
   display: flex;
   flex-direction: column;
 
   overflow: hidden;
+
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  box-shadow: var(--shadow);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
 }
+
+
+/* User details */
 
 .user-details {
   padding: 20px 18px;
+
   border-bottom: 1px solid var(--border);
 }
 
 .user-details h3 {
   margin: 0 0 18px;
+
+  color: var(--text);
+
   font-size: 15px;
+  font-weight: 650;
 }
 
 .user-details label {
   display: block;
+
   margin: 13px 0 6px;
 
   color: var(--muted);
+
   font-size: 13px;
 }
 
+
+/* User inputs */
+
 .input-display {
+  padding: 11px 12px;
+
   border: 1px solid var(--border);
   border-radius: 9px;
 
-  padding: 11px 12px;
+  background: var(--input-bg);
+  color: var(--text);
 
   font-size: 14px;
-  background: var(--primary-soft);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    color var(--transition);
 }
 
 .input-display.select {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
+
+
+/* Navigation */
 
 .navigation {
   padding: 14px;
@@ -222,6 +470,10 @@ button {
   color: var(--text);
 
   text-align: left;
+
+  transition:
+    background-color var(--transition),
+    color var(--transition);
 }
 
 .nav-item:hover {
@@ -231,18 +483,26 @@ button {
 .nav-item.active {
   background: var(--primary-light);
   color: var(--primary-dark);
+
   font-weight: 600;
 }
+
+
+/* Voice service */
 
 .service-card {
   margin: auto 14px 14px;
 
   padding: 14px;
 
-  border: 1px solid #cfe8e1;
+  border: 1px solid var(--border);
   border-radius: 10px;
 
   background: var(--primary-soft);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
 }
 
 .service-title {
@@ -250,7 +510,8 @@ button {
   align-items: center;
   gap: 8px;
 
-  color: #287b69;
+  color: var(--primary-dark);
+
   font-weight: 650;
   font-size: 13px;
 }
@@ -259,35 +520,56 @@ button {
   margin: 7px 0 0 17px;
 
   color: var(--muted);
+
   font-size: 12px;
 }
 
 .service-processing {
   margin-top: 10px;
+
   color: var(--primary-dark);
+
   font-size: 11px;
 }
 
+
 /* =========================================================
-   MAIN
+   MAIN CONTENT
    ========================================================= */
 
 .voice-main {
   min-width: 0;
 
   display: grid;
-  grid-template-columns: minmax(480px, 1fr) minmax(420px, 0.62fr);
+  grid-template-columns:
+    minmax(480px, 1fr)
+    minmax(420px, 0.62fr);
+
   gap: 14px;
 }
+
+
+/* =========================================================
+   COMMON CARDS
+   ========================================================= */
 
 .voice-panel,
 .response-card,
 .summary-card,
 .summary-placeholder {
   background: var(--panel);
+
   border: 1px solid var(--border);
   border-radius: 14px;
+
+  box-shadow: var(--shadow);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    color var(--transition);
 }
+
 
 /* =========================================================
    VOICE PANEL
@@ -301,6 +583,9 @@ button {
 
   padding: 22px;
 }
+
+
+/* Header */
 
 .conversation-header {
   display: flex;
@@ -316,8 +601,8 @@ button {
   padding: 8px 13px;
 
   border-radius: 999px;
-  background: var(--primary-light);
 
+  background: var(--primary-light);
   color: var(--primary-dark);
 
   font-size: 13px;
@@ -329,13 +614,17 @@ button {
   align-items: center;
   gap: 8px;
 
-  font-size: 14px;
   color: var(--muted);
+
+  font-size: 14px;
 }
 
 .wave-mini {
   color: var(--primary);
 }
+
+
+/* Voice content */
 
 .voice-content {
   flex: 1;
@@ -351,7 +640,11 @@ button {
 .voice-content h2 {
   margin: 0;
 
+  color: var(--text);
+
   font-size: clamp(26px, 3vw, 36px);
+  font-weight: 700;
+
   letter-spacing: -0.7px;
 }
 
@@ -361,8 +654,10 @@ button {
   margin: 12px auto 38px;
 
   color: var(--muted);
+
   line-height: 1.6;
 }
+
 
 /* =========================================================
    MICROPHONE
@@ -374,11 +669,15 @@ button {
   width: 230px;
   height: 230px;
 
-  border: 0;
-  background: transparent;
-
   display: grid;
   place-items: center;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+  color: inherit;
 }
 
 .mic-circle {
@@ -388,15 +687,17 @@ button {
   width: 135px;
   height: 135px;
 
-  border-radius: 50%;
-
-  background: var(--primary);
-  color: white;
-
   display: grid;
   place-items: center;
 
-  transition: 0.2s ease;
+  border-radius: 50%;
+
+  background: var(--primary);
+  color: #ffffff;
+
+  transition:
+    background-color var(--transition),
+    transform var(--transition);
 }
 
 .microphone-button:hover .mic-circle {
@@ -404,12 +705,22 @@ button {
   transform: scale(1.03);
 }
 
+
+/* Microphone rings */
+
 .mic-ring {
   position: absolute;
 
   border-radius: 50%;
 
   border: 1px solid #cbe7df;
+
+  transition:
+    border-color var(--transition);
+}
+
+[data-theme="dark"] .mic-ring {
+  border-color: #31574f;
 }
 
 .ring-one {
@@ -422,8 +733,12 @@ button {
   height: 225px;
 }
 
+
+/* Active animation */
+
 .microphone-active .ring-one {
   border-color: #9fd4c8;
+
   animation: pulse 1.8s infinite;
 }
 
@@ -448,6 +763,9 @@ button {
   }
 }
 
+
+/* Voice state */
+
 .voice-state {
   margin-top: 18px;
 
@@ -457,20 +775,33 @@ button {
   font-weight: 650;
 }
 
+
+/* =========================================================
+   STOP BUTTON
+   ========================================================= */
+
 .stop-button {
   margin-top: 20px;
-
-  border: 1px solid #f3c8cd;
-  border-radius: 999px;
-
-  background: #fff2f3;
-  color: var(--danger);
-
-  padding: 11px 22px;
 
   display: flex;
   align-items: center;
   gap: 10px;
+
+  padding: 11px 22px;
+
+  border: 1px solid var(--danger-border);
+  border-radius: 999px;
+
+  background: var(--danger-bg);
+  color: var(--danger);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
+}
+
+.stop-button:hover {
+  filter: brightness(0.97);
 }
 
 .stop-square {
@@ -478,8 +809,14 @@ button {
   height: 12px;
 
   border-radius: 2px;
+
   background: var(--danger);
 }
+
+
+/* =========================================================
+   NEW CALL BUTTON
+   ========================================================= */
 
 .new-call-button {
   margin-top: 20px;
@@ -489,31 +826,41 @@ button {
   border: 1px solid var(--primary);
   border-radius: 8px;
 
-  background: white;
+  background: var(--panel);
   color: var(--primary-dark);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
 }
 
+.new-call-button:hover {
+  background: var(--primary-soft);
+}
+
+
 /* =========================================================
-   PROMPTS
+   SUGGESTED PROMPTS
    ========================================================= */
 
 .suggestions {
-  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
 
   padding-top: 18px;
 
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
+  border-top: 1px solid var(--border);
 }
 
 .suggestion-label {
+  padding-top: 9px;
+
   white-space: nowrap;
 
   color: var(--muted);
-  font-size: 13px;
 
-  padding-top: 9px;
+  font-size: 13px;
 }
 
 .prompt-list {
@@ -523,22 +870,29 @@ button {
 }
 
 .prompt-list button {
+  padding: 8px 12px;
+
   border: 1px solid var(--border);
   border-radius: 999px;
 
-  padding: 8px 12px;
-
-  background: white;
+  background: var(--panel);
   color: var(--text);
 
   font-size: 12px;
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    color var(--transition);
 }
 
 .prompt-list button:hover {
   border-color: var(--primary);
+
+  background: var(--primary-light);
   color: var(--primary-dark);
-  background: var(--primary-soft);
 }
+
 
 /* =========================================================
    RIGHT COLUMN
@@ -548,9 +902,13 @@ button {
   min-width: 0;
 
   display: grid;
-  grid-template-rows: minmax(280px, 0.7fr) minmax(440px, 1fr);
+  grid-template-rows:
+    minmax(280px, 0.7fr)
+    minmax(440px, 1fr);
+
   gap: 14px;
 }
+
 
 /* =========================================================
    AGENT RESPONSE
@@ -564,6 +922,9 @@ button {
 
   padding: 18px;
 }
+
+
+/* Card headers */
 
 .card-header,
 .summary-header {
@@ -582,7 +943,11 @@ button {
 .card-header h3,
 .summary-header h3 {
   margin: 0;
+
+  color: var(--text);
+
   font-size: 16px;
+  font-weight: 650;
 }
 
 .card-header h3 span,
@@ -594,14 +959,39 @@ button {
   color: var(--primary-dark);
 }
 
+
+/* Clear */
+
 .clear-button {
+  padding: 6px 8px;
+
   border: 0;
+  border-radius: 6px;
+
   background: transparent;
   color: var(--muted);
+
+  font-size: 12px;
+
+  transition:
+    background-color var(--transition),
+    color var(--transition);
 }
+
+.clear-button:hover {
+  background: var(--primary-soft);
+  color: var(--text);
+}
+
+
+/* =========================================================
+   TRANSCRIPT
+   ========================================================= */
 
 .transcript {
   flex: 1;
+
+  min-height: 0;
 
   overflow-y: auto;
 
@@ -611,7 +1001,11 @@ button {
   border: 1px solid var(--border);
   border-radius: 10px;
 
-  background: #fbfdfc;
+  background: var(--transcript-bg);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
 }
 
 .empty-transcript {
@@ -620,9 +1014,13 @@ button {
   display: grid;
   place-items: center;
 
-  color: #8a969d;
+  color: var(--muted);
+
   font-size: 13px;
 }
+
+
+/* Messages */
 
 .message {
   margin-bottom: 16px;
@@ -642,7 +1040,7 @@ button {
 }
 
 .user-message strong {
-  color: #45606b;
+  color: var(--text-secondary);
 }
 
 .agent-message strong {
@@ -650,36 +1048,52 @@ button {
 }
 
 .message-top span {
-  color: #9aa4aa;
+  color: var(--muted);
 }
 
 .message p {
   margin: 0;
 
+  color: var(--text);
+
   font-size: 13px;
   line-height: 1.55;
 }
 
+
 /* =========================================================
-   SUMMARY
+   CALL SUMMARY
    ========================================================= */
 
 .summary-card {
   overflow: auto;
+
   padding: 18px;
 }
 
+
+/* Completed badge */
+
 .completed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
   padding: 6px 10px;
 
   border-radius: 999px;
 
-  background: #e9f8ef;
+  background: var(--success-bg);
   color: var(--success);
 
   font-size: 11px;
   font-weight: 650;
 }
+
+
+/* =========================================================
+   CALL METADATA
+   ========================================================= */
 
 .call-meta {
   display: grid;
@@ -702,20 +1116,29 @@ button {
 
 .call-meta span {
   color: var(--muted);
+
   font-size: 10px;
 }
 
 .call-meta strong {
+  color: var(--text);
+
   font-size: 11px;
   font-weight: 600;
 }
 
 .success-text {
-  color: var(--success);
+  color: var(--success) !important;
 }
+
+
+/* =========================================================
+   SUMMARY DESCRIPTION
+   ========================================================= */
 
 .summary-section {
   padding: 13px 0;
+
   border-bottom: 1px solid var(--border);
 }
 
@@ -723,17 +1146,25 @@ button {
 .summary-box h4 {
   margin: 0 0 7px;
 
+  color: var(--text);
+
   font-size: 12px;
+  font-weight: 650;
 }
 
 .summary-section p {
   margin: 0;
 
-  color: #4f5d65;
+  color: var(--text-secondary);
 
   font-size: 11px;
   line-height: 1.5;
 }
+
+
+/* =========================================================
+   SUMMARY GRID
+   ========================================================= */
 
 .summary-grid {
   display: grid;
@@ -750,18 +1181,31 @@ button {
   border: 1px solid var(--border);
   border-radius: 8px;
 
-  background: #fbfdfc;
+  background: var(--summary-box-bg);
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
 }
 
 .summary-box ul {
   margin: 0;
   padding-left: 15px;
 
-  color: #526069;
+  color: var(--text-secondary);
 
   font-size: 10px;
   line-height: 1.55;
 }
+
+.summary-box li {
+  margin-bottom: 2px;
+}
+
+
+/* =========================================================
+   SUMMARY ACTION BUTTONS
+   ========================================================= */
 
 .summary-actions {
   display: flex;
@@ -773,25 +1217,39 @@ button {
 .summary-actions button {
   flex: 1;
 
+  padding: 9px 7px;
+
   border: 1px solid var(--border);
   border-radius: 7px;
 
-  background: white;
-
-  padding: 9px 7px;
+  background: var(--panel);
+  color: var(--text);
 
   font-size: 10px;
+
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    color var(--transition);
 }
 
 .summary-actions button:hover {
   border-color: var(--primary);
+
+  background: var(--primary-soft);
 }
 
 .summary-actions .primary-action {
-  background: var(--primary);
   border-color: var(--primary);
-  color: white;
+
+  background: var(--primary);
+  color: #ffffff;
 }
+
+.summary-actions .primary-action:hover {
+  background: var(--primary-dark);
+}
+
 
 /* =========================================================
    SUMMARY PLACEHOLDER
@@ -825,6 +1283,10 @@ button {
 
 .summary-placeholder h3 {
   margin: 12px 0 5px;
+
+  color: var(--text);
+
+  font-size: 16px;
 }
 
 .summary-placeholder p {
@@ -838,8 +1300,30 @@ button {
   line-height: 1.5;
 }
 
+
 /* =========================================================
-   RESPONSIVE
+   SCROLLBAR
+   ========================================================= */
+
+.transcript::-webkit-scrollbar,
+.summary-card::-webkit-scrollbar {
+  width: 6px;
+}
+
+.transcript::-webkit-scrollbar-track,
+.summary-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.transcript::-webkit-scrollbar-thumb,
+.summary-card::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+
+
+/* =========================================================
+   RESPONSIVE - TABLET
    ========================================================= */
 
 @media (max-width: 1200px) {
@@ -856,6 +1340,11 @@ button {
   }
 }
 
+
+/* =========================================================
+   RESPONSIVE - MOBILE
+   ========================================================= */
+
 @media (max-width: 800px) {
   .voice-layout {
     grid-template-columns: 1fr;
@@ -866,31 +1355,190 @@ button {
   }
 
   .top-navbar {
+    height: 76px;
+
     padding: 0 16px;
+  }
+
+  .navbar-right {
+    gap: 8px;
+  }
+
+  .online-status {
+    display: none;
   }
 
   .profile span:not(.dropdown) {
     display: none;
   }
 
+  .brand {
+    gap: 10px;
+  }
+
+  .brand-logo {
+    width: 40px;
+    height: 40px;
+
+    border-radius: 11px;
+  }
+
   .brand h1 {
     font-size: 18px;
+  }
+
+  .brand p {
+    font-size: 11px;
+  }
+
+  .voice-layout {
+    min-height: calc(100vh - 76px);
+
+    padding: 10px;
   }
 
   .voice-main {
     display: block;
   }
 
+  .voice-panel {
+    min-height: 650px;
+
+    padding: 16px;
+  }
+
   .voice-right-column {
     display: grid;
-    margin-top: 14px;
+
+    margin-top: 10px;
+
+    grid-template-rows: 380px auto;
+  }
+
+  .microphone-button {
+    width: 200px;
+    height: 200px;
+  }
+
+  .mic-circle {
+    width: 120px;
+    height: 120px;
+  }
+
+  .ring-one {
+    width: 165px;
+    height: 165px;
+  }
+
+  .ring-two {
+    width: 195px;
+    height: 195px;
+  }
+
+  .voice-description {
+    margin-bottom: 24px;
   }
 
   .suggestions {
     flex-direction: column;
+    gap: 8px;
   }
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .summary-actions {
+    flex-direction: column;
+  }
+}
+
+
+/* =========================================================
+   VERY SMALL SCREENS
+   ========================================================= */
+
+@media (max-width: 480px) {
+  .top-navbar {
+    padding: 0 10px;
+  }
+
+  .theme-toggle {
+    width: 58px;
+  }
+
+  .theme-icon {
+    width: 23px;
+    height: 23px;
+  }
+
+  .brand h1 {
+    font-size: 16px;
+  }
+
+  .brand p {
+    display: none;
+  }
+
+  .voice-content h2 {
+    font-size: 25px;
+  }
+
+  .microphone-button {
+    width: 180px;
+    height: 180px;
+  }
+
+  .mic-circle {
+    width: 105px;
+    height: 105px;
+  }
+
+  .ring-one {
+    width: 145px;
+    height: 145px;
+  }
+
+  .ring-two {
+    width: 175px;
+    height: 175px;
+  }
+
+  .call-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   REDUCE MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+
+  .microphone-active .ring-one,
+  .microphone-active .ring-two {
+    animation: none;
+  }
+
+  .voice-app,
+  .top-navbar,
+  .sidebar,
+  .voice-panel,
+  .response-card,
+  .summary-card,
+  .summary-placeholder,
+  .theme-toggle,
+  .theme-icon,
+  .mic-circle,
+  .nav-item,
+  .prompt-list button,
+  .summary-actions button {
+    transition: none;
   }
 }
