@@ -29,6 +29,17 @@ h1 { max-width: 560px; margin: 1.5rem 0 1rem; font-size: clamp(3.2rem, 10vw, 6.5
 #connect-button:disabled { cursor: wait; opacity: 0.65; }
 
 .controls { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
-.controls button { margin-top: 0; }
-#mic-button { border: 1px solid var(--line); border-radius: 999px; padding: 0.8rem 1rem; color: var(--ink); background: transparent; font: 700 0.78rem Arial, sans-serif; cursor: pointer; }
-#mic-button:disabled { cursor: not-allowed; opacity: 0.45; }
+.controls button, .panel button { margin-top: 0; }
+#mic-button, .panel button, #ask-button { border: 1px solid var(--line); border-radius: 999px; padding: 0.8rem 1rem; color: var(--ink); background: transparent; font: 700 0.78rem Arial, sans-serif; cursor: pointer; }
+#mic-button:disabled, .panel button:disabled, #ask-button:disabled { cursor: not-allowed; opacity: 0.45; animation: none; }
+#attach-button:not(:disabled):hover, #ask-button:not(:disabled):hover { box-shadow: 0 0 0 1px var(--accent); }
+
+.panel { margin-top: 2.5rem; padding: 1.2rem; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.panel-title { margin: 0 0 0.9rem; color: var(--accent); font: 700 0.68rem Arial, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; }
+.panel select, .panel input[type="text"] { width: 100%; padding: 0.7rem 0.9rem; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: rgba(0, 0, 0, 0.25); font: 0.9rem Arial, sans-serif; }
+.context-view { min-height: 8rem; margin: 0.9rem 0 0; padding: 0.9rem; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: rgba(0, 0, 0, 0.22); color: var(--muted); font: 0.72rem/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; }
+.transcript { height: 14rem; overflow-y: auto; padding: 0.1rem 0; font: 0.95rem/1.55 Georgia, "Times New Roman", serif; }
+.line { margin: 0.35rem 0; }
+.line.agent { color: var(--ink); }
+.line.user { color: var(--muted); }
+#question-input { animation: none; }

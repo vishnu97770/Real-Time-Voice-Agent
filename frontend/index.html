@@ -10,7 +10,8 @@
     <main class="shell">
       <p class="eyebrow">REAL-TIME CREDIT WORKSPACE</p>
       <h1>Underwriting, with a voice.</h1>
-      <p class="lede">The workspace foundation is ready. Voice transport and underwriting context arrive in the next vertical slices.</p>
+      <p class="lede">Attach an application, ask a grounded question, and see the evidence-backed answer.</p>
+
       <section class="status-card" aria-live="polite">
         <span class="status-dot" id="status-dot"></span>
         <div>
@@ -18,8 +19,34 @@
           <p id="status-text">Checking connection...</p>
         </div>
       </section>
-      <div class="controls"><button id="connect-button" type="button">Connect voice session</button><button id="mic-button" type="button" disabled>Start microphone</button></div>
-      <p class="fine-print" id="session-text">Transport is idle.</p>
+
+      <section class="panel">
+        <h2 class="panel-title">Application context</h2>
+        <select id="application-select" aria-label="Application"></select>
+        <button id="create-application-button" type="button">New application</button>
+        <button id="refresh-applications-button" type="button">Refresh</button>
+        <pre id="application-context" class="context-view">No application selected.</pre>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Voice session</h2>
+        <div class="controls">
+          <button id="connect-button" type="button">Connect voice session</button>
+          <button id="mic-button" type="button" disabled>Start microphone</button>
+          <button id="attach-button" type="button" disabled>Attach application</button>
+        </div>
+        <p class="fine-print" id="session-text">Transport is idle.</p>
+        <div class="controls">
+          <input id="question-input" type="text" placeholder="Ask a grounded question..." disabled>
+          <button id="ask-button" type="button" disabled>Ask</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Transcript</h2>
+        <div id="transcript" class="transcript" aria-live="polite"></div>
+      </section>
+
       <p class="fine-print" id="version-text"></p>
     </main>
     <script src="./app.js"></script>
