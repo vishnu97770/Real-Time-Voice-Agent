@@ -122,9 +122,9 @@ export default function TopNavbar({ theme, onToggleTheme }) {
 
         {/* User Profile */}
         <div className="profile">
-          <div className="avatar">VV</div>
+          <div className="avatar">V</div>
 
-          <span>V. Vishnu</span>
+          <span>Vegas</span>
 
           <span className="dropdown">⌄</span>
         </div>
