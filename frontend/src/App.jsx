@@ -1,202 +1,348 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import AgentConfigPanel from "./components/voice-agent/AgentConfigPanel";
+import { emptyConfig, loadConfig, resolveConfig, sameConfig, saveConfig } from "./runtime/agentConfig.js";
+import { buildCallRecord } from "./runtime/callRecord.js";
+import { CALL_STATE_TEXT } from "./runtime/format.js";
 import TopNavbar from "./components/voice-agent/TopNavbar";
 import Sidebar from "./components/voice-agent/Sidebar";
 import VoicePanel from "./components/voice-agent/VoicePanel";
 import AgentResponse from "./components/voice-agent/AgentResponse";
 import CallSummary from "./components/voice-agent/CallSummary";
+import CallDetails from "./components/voice-agent/CallDetails";
+import WelcomeBar from "./components/voice-agent/WelcomeBar";
+import { ProfilePage, SectionPlaceholder, SettingsPage } from "./components/voice-agent/Pages";
+import CalleeApp from "./components/voice-agent/CalleeApp";
+import CallHistory from "./components/voice-agent/CallHistory";
+import Login from "./components/voice-agent/Login";
+import { authEvents } from "./runtime/api.js";
+import { fetchSession, logout } from "./runtime/auth.js";
+import { detectBackend } from "./runtime/transports.js";
+import { fetchCustomers } from "./runtime/customers.js";
+import { DEFAULT_PROFILE_ID, PROFILES, getProfile } from "./profiles/index.js";
+import { useVoiceAgent } from "./runtime/useVoiceAgent.js";
 import "./styles/voice-agent.css";
 
-const mockResponses = [
-  {
-    speaker: "You",
-    text: "What is the status of application APP-1024?",
-    time: "00:00",
-  },
-  {
-    speaker: "Agent",
-    text: "Let me check that for you. Application APP-1024 is currently under financial review. All required documents have been received except the latest bank statement. The current risk score is 0.28, which indicates moderate risk.",
-    time: "00:02",
-  },
-];
+const DEFAULT_THEME = "dark";
 
-function App() {
+// The product is not tied to one industry, so the header does not name one.
+const TAGLINE = "One Voice Engine. Any Role. Any Domain.";
+
+function Console({ user, onSignOut }) {
   const [theme, setTheme] = useState(
-    () => localStorage.getItem("voice-agent-theme") || "light"
+    () => localStorage.getItem("voice-agent-theme") || DEFAULT_THEME
+  );
+  const [profileId, setProfileId] = useState(
+    () => localStorage.getItem("voice-agent-profile") || DEFAULT_PROFILE_ID
   );
 
-  const [callState, setCallState] = useState("idle");
-  const [duration, setDuration] = useState(0);
-  const [messages, setMessages] = useState(mockResponses);
-  const timerRef = useRef(null);
+  const profile = getProfile(profileId);
+  const [customers, setCustomers] = useState([]);
+  const [customerRef, setCustomerRef] = useState("");
+  // What the operator wants the agent to do. Null until a valid one is saved.
+  const [agentConfig, setAgentConfig] = useState(() => loadConfig());
+  // What the sidebar fields hold while being edited; saving makes it the agent.
+  const [configDraft, setConfigDraft] = useState(() => loadConfig() ?? emptyConfig());
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configSaved, setConfigSaved] = useState(false);
+  const [configExpanded, setConfigExpanded] = useState(() => !loadConfig());
+  const [navOpen, setNavOpen] = useState(false); // the sidebar drawer on small screens
+  const agentContext = useMemo(() => resolveConfig(agentConfig), [agentConfig]);
+  const agent = useVoiceAgent(profile, { customerRef, agentConfig: agentContext });
+  // home | applications | history | analytics | profile | settings
+  const [view, setView] = useState("home");
+  // Which part of a finished call the centre shows. Tied to the call, so a new
+  // call starts on its summary again.
+  const [recordView, setRecordView] = useState({ callId: null, view: "summary" });
 
+  const serverBrain = agent.brain.source === "server";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (serverBrain ? fetchCustomers(profile.id) : Promise.resolve([])).then((list) => {
+      if (!cancelled) setCustomers(list);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile.id, serverBrain]);
+
+  const isActive = agent.callState !== "idle" && agent.callState !== "ended";
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("voice-agent-theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((currentTheme)=> 
-      currentTheme === "light" ?"dark":"light"
-    );
-  };
+  useEffect(() => {
+    localStorage.setItem("voice-agent-profile", profile.id);
+  }, [profile.id]);
 
   useEffect(() => {
-    if (callState === "listening" || callState === "speaking") {
-      timerRef.current = setInterval(() => {
-        setDuration((previous) => previous + 1);
-      }, 1000);
-    }
+    if (!configSaved) return undefined;
 
-    return () => clearInterval(timerRef.current);
-  }, [callState]);
+    const timer = setTimeout(() => setConfigSaved(false), 4000);
 
-  const startConversation = () => {
-    setCallState("listening");
-    setDuration(0);
+    return () => clearTimeout(timer);
+  }, [configSaved]);
 
-    setMessages([
-      {
-        speaker: "You",
-        text: "What is the status of application APP-1024?",
-        time: "00:00",
-      },
-      {
-        speaker: "Agent",
-        text: "Let me check that for you...",
-        time: "00:02",
-      },
-    ]);
-  };
+  useEffect(() => {
+    if (!navOpen) return undefined;
 
-  const stopConversation = () => {
-    clearInterval(timerRef.current);
-    setCallState("ended");
-  };
-
-  const handlePrompt = (prompt) => {
-    if (callState === "idle" || callState === "ended") {
-      setCallState("listening");
-      setDuration(0);
-    }
-
-    const newMessage = {
-      speaker: "You",
-      text: prompt,
-      time: formatTime(duration),
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setNavOpen(false);
     };
 
-    setMessages((previous) => [...previous, newMessage]);
+    window.addEventListener("keydown", onKeyDown);
 
-    setTimeout(() => {
-      setCallState("processing");
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navOpen]);
 
-      setTimeout(() => {
-        setMessages((previous) => [
-          ...previous,
-          {
-            speaker: "Agent",
-            text: getMockResponse(prompt),
-            time: formatTime(duration + 2),
-          },
-        ]);
-
-        setCallState("speaking");
-
-        setTimeout(() => {
-          setCallState("listening");
-        }, 2500);
-      }, 700);
-    }, 500);
+  const saveAgentConfig = (config) => {
+    saveConfig(config); // best effort: it still applies to this session if storage is blocked
+    setAgentConfig(config);
+    setConfigDraft(config);
+    setConfigOpen(false);
+    setConfigSaved(true);
   };
 
-  const resetCall = () => {
-    clearInterval(timerRef.current);
-    setCallState("idle");
-    setDuration(0);
-    setMessages([]);
+  const openConfig = () => {
+    setNavOpen(false);
+    setConfigOpen(true);
+  };
+
+  const navigate = (target) => {
+    setView(target);
+    setNavOpen(false);
+  };
+
+  const record = buildCallRecord({
+    // A call keeps the agent it started with, even if the configuration is edited after.
+    config: agent.callState === "idle" ? agentContext : agent.callConfig,
+    profile,
+    user,
+    callState: agent.callState,
+    summary: agent.summary,
+    summaryPending: agent.summaryPending,
+    duration: agent.duration,
+    startedAt: agent.startedAt,
+    callError: agent.callError,
+  });
+  const summaryView = recordView.callId === record.callId ? recordView.view : "summary";
+
+  const showTranscript = () => {
+    setRecordView({ callId: record.callId, view: "transcript" });
+    document.getElementById("call-summary")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const toggleTheme = () => {
+    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
+  };
+
+  // A profile is loaded per call, so switching starts from a clean slate.
+  const changeProfile = (id) => {
+    agent.reset();
+    setCustomerRef("");
+    setCustomers([]); // the old profile's customers must not linger while the new list loads
+    setProfileId(id);
   };
 
   return (
     <div className="voice-app">
-      <TopNavbar 
+      <TopNavbar
         theme={theme}
         onToggleTheme={toggleTheme}
+        workspaceLabel={TAGLINE}
+        user={user}
+        onSignOut={onSignOut}
+        onNavigate={navigate}
+        sidebarOpen={navOpen}
+        onToggleSidebar={() => setNavOpen(!navOpen)}
       />
 
       <div className="voice-layout">
-        <Sidebar callState={callState} />
+        <Sidebar
+          open={navOpen}
+          callState={agent.callState}
+          profiles={PROFILES}
+          profile={profile}
+          profileLocked={isActive}
+          onProfileChange={changeProfile}
+          view={view}
+          onNavigate={navigate}
+          customers={customers}
+          customerRef={customerRef}
+          onCustomerChange={setCustomerRef}
+          voice={agent.voice}
+          brain={agent.brain}
+          configExpanded={configExpanded}
+          onToggleConfig={() => setConfigExpanded(!configExpanded)}
+          configDraft={configDraft}
+          onConfigDraftChange={(patch) => setConfigDraft({ ...configDraft, ...patch })}
+          configured={Boolean(agentConfig)}
+          configDirty={!sameConfig(configDraft, agentConfig ?? emptyConfig())}
+          configSaved={configSaved}
+          onConfigure={openConfig}
+        />
 
-        <main className="voice-main">
-          <VoicePanel
-            callState={callState}
-            duration={duration}
-            onStart={startConversation}
-            onStop={stopConversation}
-            onPrompt={handlePrompt}
-            onReset={resetCall}
+        {navOpen && (
+          <button
+            type="button"
+            className="sidebar-backdrop"
+            aria-label="Close navigation"
+            onClick={() => setNavOpen(false)}
           />
+        )}
 
-          <div className="voice-right-column">
-            <AgentResponse
-              messages={messages}
-              onClear={() => setMessages([])}
+        {configOpen && (
+          <AgentConfigPanel
+            initial={configDraft}
+            onSave={saveAgentConfig}
+            onCancel={() => setConfigOpen(false)}
+          />
+        )}
+
+        {view === "history" && (
+          <main className="history-main">
+            <CallHistory
+              serverAvailable={agent.brain.source === "server"}
+              telephony={Boolean(agent.brain.telephony)}
+              profiles={PROFILES}
             />
+          </main>
+        )}
 
-            {callState === "ended" ? (
-              <CallSummary duration={duration} />
-            ) : (
-              <div className="summary-placeholder">
-                <div className="placeholder-icon">▤</div>
+        {view === "applications" && (
+          <main className="history-main">
+            <SectionPlaceholder
+              icon="applications"
+              title="Applications"
+              description="The applications your voice agent is connected to will be listed here."
+            />
+          </main>
+        )}
 
-                <h3>Call Summary</h3>
+        {view === "analytics" && (
+          <main className="history-main">
+            <SectionPlaceholder
+              icon="analytics"
+              title="Analytics"
+              description="Call volume, outcomes and duration trends will be shown here."
+            />
+          </main>
+        )}
 
-                <p>
-                  The call summary will automatically appear here after the
-                  conversation ends.
-                </p>
-              </div>
-            )}
-          </div>
-        </main>
+        {view === "profile" && (
+          <main className="history-main">
+            <ProfilePage user={user} />
+          </main>
+        )}
+
+        {view === "settings" && (
+          <main className="history-main">
+            <SettingsPage
+              theme={theme}
+              onThemeChange={setTheme}
+              onConfigure={openConfig}
+              configLocked={isActive}
+            />
+          </main>
+        )}
+
+        {view === "home" && (
+          <main className="voice-main">
+            <div className="home-center">
+              <WelcomeBar contact={record.contact} agentName={record.agent.agentName} status={record.status} />
+
+              <CallSummary
+                record={record}
+                configured={Boolean(agentConfig)}
+                view={summaryView}
+                onViewChange={(next) => setRecordView({ callId: record.callId, view: next })}
+                onConfigure={openConfig}
+              />
+
+              <VoicePanel
+                profile={profile}
+                callState={agent.callState}
+                duration={agent.duration}
+                interim={agent.voice.interim}
+                micState={agent.voice.micState}
+                onStart={agent.beginCall}
+                onStop={agent.endCall}
+                onSend={agent.sendText}
+                onReset={agent.reset}
+                onViewHistory={() => navigate("history")}
+              />
+            </div>
+
+            <div className="voice-right-column">
+              <AgentResponse
+                messages={agent.messages}
+                pending={agent.pending}
+                onRespond={agent.sendText}
+                onClear={agent.clearMessages}
+                canClear={!isActive}
+                agentName={record.agent.agentName}
+                status={isActive ? CALL_STATE_TEXT[agent.callState] : null}
+              />
+
+              <CallDetails record={record} summary={agent.summary} onViewTranscript={showTranscript} />
+            </div>
+          </main>
+        )}
       </div>
     </div>
   );
 }
 
-function formatTime(seconds) {
-  const minutes = Math.floor(seconds / 60);
-  const remaining = seconds % 60;
+// The operator console needs a sign-in when the server says so. With no server
+// (offline mode) there is nothing to sign in to.
+function Operator() {
+  const [auth, setAuth] = useState({ status: "checking", user: null }); // checking | needed | ok
 
-  return `${String(minutes).padStart(2, "0")}:${String(
-    remaining
-  ).padStart(2, "0")}`;
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const { available, authRequired } = await detectBackend();
+      const user = available && authRequired ? await fetchSession().catch(() => null) : null;
+
+      if (!cancelled) {
+        setAuth(!available || !authRequired || user ? { status: "ok", user } : { status: "needed", user: null });
+      }
+    })();
+
+    const expired = () => setAuth({ status: "needed", user: null });
+
+    authEvents.addEventListener("unauthorized", expired);
+
+    return () => {
+      cancelled = true;
+      authEvents.removeEventListener("unauthorized", expired);
+    };
+  }, []);
+
+  const signOut = async () => {
+    await logout();
+    setAuth({ status: "needed", user: null });
+  };
+
+  if (auth.status === "checking") return <div className="callee-page"><p className="callee-note">Loading...</p></div>;
+  if (auth.status === "needed") return <Login onSignedIn={(user) => setAuth({ status: "ok", user })} />;
+
+  return <Console user={auth.user} onSignOut={auth.user ? signOut : null} />;
 }
 
-function getMockResponse(prompt) {
-  const value = prompt.toLowerCase();
+// A link like /?job=JOB-...&token=... is a phone call for someone: show them the
+// incoming-call screen, not the operator console.
+function App() {
+  const params = new URLSearchParams(window.location.search);
+  const jobId = params.get("job");
+  const token = params.get("token");
 
-  if (value.includes("pending")) {
-    return "There are currently 3 applications pending review. Two are waiting for document verification and one requires additional financial analysis.";
-  }
-
-  if (value.includes("risk")) {
-    return "The current application has a moderate risk profile. The main risk factors are the debt-to-income ratio, recent revenue variation, and the pending bank statement.";
-  }
-
-  if (value.includes("summarize")) {
-    return "The applicant has submitted the required financial documents and is currently under review. The main outstanding item is the latest bank statement.";
-  }
-
-  if (value.includes("call")) {
-    return "I can initiate an outbound call to the applicant or schedule a follow-up call based on your preferred time.";
-  }
-
-  if (value.includes("schedule")) {
-    return "A follow-up call can be scheduled. The call orchestration service will trigger the outbound telephony workflow at the selected time.";
-  }
-
-  return "I understand. I can retrieve application information, analyze financial data, explain risk predictions, retrieve evidence, and perform supported underwriting actions.";
+  return jobId && token ? <CalleeApp jobId={jobId} token={token} /> : <Operator />;
 }
 
 export default App;

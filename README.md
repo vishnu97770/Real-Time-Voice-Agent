@@ -8,6 +8,7 @@ It started as a credit-underwriting copilot. It's architected to be much more th
 
 ---
 
+<<<<<<< HEAD
 ## Core Idea
 
 Most voice-bot projects hard-code one persona into one pipeline. This project separates the two:
@@ -71,3 +72,28 @@ The point of this project isn't "a voice bot for credit underwriting" — it's a
 ---
 
 *Academic project — Kirit Ranjan, V. Vishnu (PST-25-0051, PST-25-0106), 2025, 3rd Semester.*
+=======
+_____________________________________________________________________________________________________________________________________________________|___
+Technology	        |            Type            |             What we use it for?              |   	      How it helps our project               |
+____________________|____________________________|______________________________________________|____________________________________________________|__        
+Python	            |   Programming Language	 |  Backend, agent logic, APIs, processing	    |  Acts as the core development language             |
+Pipecat	            |   Voice AI Framework	     |  Builds the real-time voice pipeline	        |  Connects and orchestrates ASR → LLM → TTS         |
+LiveKit Agents	    |   Voice/Realtime Framework |  Real-time communication and agent execution |  Enables low-latency, real-time voice interaction  |
+Deepgram / Whisper	|   ASR	                     |  Speech → Text	                            |  Allows the agent to understand what the user says | 
+ElevenLabs / PlayHT |   TTS	                     |  Text → Speech	                            |  Allows the agent to respond naturally using voice |
+LLM	                |   AI Model	             |  Reasoning and response generation	        |  Acts as the brain of the voice agent              |
+_____________________________________________________________________________________________________________________________________________________|_
+
+
+## Running it
+
+**Frontend** (`frontend/`): `npm install && npm run dev`. Works on its own with a built-in
+rule-based brain (Chrome or Edge for voice; typing works anywhere).
+
+**Backend** (`backend/`): a FastAPI service that runs the call with Gemini tool-calling and
+streams the reply so speech starts on the first sentence. It also provides operator sign-in, rate
+limits, outbound call jobs with signed result callbacks, saved call history, and per-customer data.
+Set `GEMINI_API_KEY` in `backend/.env`, create a user with `python -m app.cli create-user`, and
+the browser uses it automatically when it is reachable. See [`backend/README.md`](backend/README.md).
+
+>>>>>>> 1ec24ea (Add voice console: profiles, voice loop, sign-in, call history, callee screen)

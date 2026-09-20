@@ -1,77 +1,42 @@
-// import Icon from "./Icon";
-
-// export default function TopNavbar() {
-//   return (
-//     <header className="top-navbar">
-//       <div className="brand">
-//         <div className="brand-logo">
-//           <span>AI</span>
-//         </div>
-
-//         <div>
-//           <h1>Real-Time Voice Agent</h1>
-//           <p>Credit Underwriting Workspace</p>
-//         </div>
-//       </div>
-
-//       <div className="navbar-right">
-//         <div className="online-status">
-//           <span className="online-dot" />
-//           Online
-//         </div>
-
-//         <button className="icon-button" aria-label="Notifications">
-//           <Icon name="bell" size={21} />
-//         </button>
-
-//         <button
-//           className="theme-toggle"
-//           onClick={onToggleTheme}
-//           aria-label={
-//             isDark ? "Switch to light mode" : "Switch to dark mode"
-//           }
-//           title={isDark ? "Light mode" : "Dark mode"}
-//         >
-//           <span className={`thee-icon ${!isDark ? "active" : ""}`}>
-//             ☀
-//           </span>
-
-//           <span className={`thee-icon ${!isDark ? "active" : ""}`}>
-//             ☾
-//           </span>
-//         </button>
-
-//         <div className="profile">
-//           <div className="avatar">VV</div>
-
-//           <span>V. Vishnu</span>
-
-//           <span className="dropdown">⌄</span>
-//         </div>
-//       </div>
-//     </header>
-//   );
-// }
-
-
-
-
 import Icon from "./Icon";
+import ProfileMenu from "./ProfileMenu";
 
-export default function TopNavbar({ theme, onToggleTheme }) {
+export default function TopNavbar({
+  theme,
+  onToggleTheme,
+  workspaceLabel,
+  user,
+  onSignOut,
+  onNavigate,
+  sidebarOpen,
+  onToggleSidebar,
+}) {
   const isDark = theme === "dark";
 
   return (
     <header className="top-navbar">
       {/* Brand */}
       <div className="brand">
+        <button
+          type="button"
+          className="icon-button sidebar-toggle"
+          aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={sidebarOpen}
+          aria-controls="app-sidebar"
+          onClick={onToggleSidebar}
+        >
+          <Icon name={sidebarOpen ? "cross" : "menu"} size={22} />
+        </button>
+
         <div className="brand-logo">
           <span>AI</span>
         </div>
 
         <div>
-          <h1>Real-Time Voice Agent</h1>
-          <p>Credit Underwriting Workspace</p>
+          <h1>
+            Real-Time <span>Voice</span> Agent
+          </h1>
+          <p>{workspaceLabel}</p>
         </div>
       </div>
 
@@ -121,13 +86,13 @@ export default function TopNavbar({ theme, onToggleTheme }) {
         </button>
 
         {/* User Profile */}
-        <div className="profile">
-          <div className="avatar">V</div>
-
-          <span>Vegas</span>
-
-          <span className="dropdown">⌄</span>
-        </div>
+        <ProfileMenu
+          user={user}
+          theme={theme}
+          onToggleTheme={onToggleTheme}
+          onNavigate={onNavigate}
+          onSignOut={onSignOut}
+        />
       </div>
     </header>
   );
