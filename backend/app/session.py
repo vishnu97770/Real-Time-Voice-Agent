@@ -125,6 +125,9 @@ class Session:
     # Set on an automated call made for an organization's agent and contact (see app/voice_context.py).
     context: VoiceSessionContext | None = None
     channel: str = "web"  # "web" | "phone"
+    # The organization a console call was opened for (a self-service account's own), so its result
+    # is theirs. None for everything else: job calls take theirs from the job.
+    organization_id: int | None = None
     # Hangs up the real phone line. Set only on phone calls; called once, by finalize().
     hangup: Callable[[], Awaitable[None]] | None = None
     allowed_tools: dict[str, ToolSpec] = field(default_factory=dict)

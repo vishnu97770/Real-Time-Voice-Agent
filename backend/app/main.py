@@ -9,13 +9,15 @@ from contextlib import asynccontextmanager
 from typing import Annotated, Any, Literal
 
 import httpx
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 from fastapi import Depends, FastAPI, Header, HTTPException, Path, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import OperationalError
 
-from app.auth import COOKIE, Auth, public_user
+from app.auth import COOKIE, Auth, EmailTaken, public_user
 from app.brains import build_brain
 from app.brains.base import Brain
 from app.config import Settings, get_settings
@@ -58,6 +60,17 @@ class ClientEvent(BaseModel):
 class LoginRequest(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=1, max_length=200)
+
+class SignupRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    # The password policy (minimum length) is enforced in one place, security.hash_password, so the
+    # refusal reaches the person as a readable message rather than a schema error.
+    password: str = Field(min_length=1, max_length=200)
+    workspace_name: str = Field(min_length=1, max_length=120)
+
+
+class GoogleLoginRequest(BaseModel):
+    credential: str = Field(min_length=1, max_length=8192)
 
 
 class AnswerRequest(BaseModel):
@@ -210,6 +223,26 @@ def create_app(
         user = await operator(request)
         return f"user:{user['id']}"
 
+    def confinement(user: dict[str, Any] | None) -> int | None:
+        """The organization this account is confined to, or None for no confinement.
+
+        Only an ordinary operator who belongs to an organization is confined: that is what a
+        self-service sign-up creates, and such an account must never see another organization's
+        calls, jobs or results. Administrators, accounts that predate organizations, business
+        systems (API key) and a server with sign-in switched off see everything, exactly as they
+        did before sign-up existed."""
+        if user is None or user.get("role") == "admin":
+            return None
+
+        return user.get("organization_id")
+
+    async def org_scope(request: Request, x_api_key: Annotated[str | None, Header()] = None) -> int | None:
+        """Used next to `business`, which has already refused anyone who may not be here."""
+        if x_api_key is not None:
+            return None  # a business system (its key was checked by `business`)
+
+        return confinement(await auth.user_for_request(request))
+
     async def admin_or_key(request: Request, x_api_key: Annotated[str | None, Header()] = None) -> None:
         """Changing customer data: a business system (API key) or an admin."""
         if x_api_key is not None:
@@ -242,6 +275,7 @@ def create_app(
             "outbound": bool(brain),
             "telephony": telephony is not None,
             "auth_required": settings.auth_required,
+            "signup_enabled": settings.signup_enabled,
             "profiles": list(PROFILES),
         }
 
@@ -269,6 +303,78 @@ def create_app(
         )
         return {"user": public_user(user)}
 
+
+    @app.post("/api/auth/google")
+    async def google_login(
+        request: Request,
+        body: GoogleLoginRequest,
+        response: Response,
+    ) -> dict[str, Any]:
+        hit("login-ip", auth.client_ip(request), settings.limit_login_per_ip)
+
+        if not settings.google_client_id:
+            raise HTTPException(503, "Google sign-in is not configured")
+
+        try:
+            claims = id_token.verify_oauth2_token(
+                body.credential,
+                google_requests.Request(),
+                settings.google_client_id,
+            )
+        except ValueError:
+            raise HTTPException(401, "Invalid Google credential") from None
+
+        email = str(claims.get("email", "")).strip().lower()
+        if not email or claims.get("email_verified") is not True:
+            raise HTTPException(401, "Google account email is not verified")
+
+        user = await auth._db(auth.repo.get_user_by_email, email)
+
+        if user is None or user["disabled"]:
+            raise HTTPException(401, "Google account is not authorized")
+
+        response.set_cookie(
+            COOKIE,
+            await auth.start_session(user),
+            max_age=settings.auth_session_hours * 3600,
+            httponly=True,
+            samesite="lax",
+            secure=settings.cookie_secure,
+            path="/",
+        )
+
+        return {"user": public_user(user)}
+
+    
+
+    @app.post("/api/auth/signup", status_code=201)
+    async def signup(request: Request, body: SignupRequest, response: Response) -> dict[str, Any]:
+        """Create an account (with its own workspace) and sign it in, exactly as /api/auth/login would."""
+        if not settings.signup_enabled:
+            raise HTTPException(403, "Sign-up is not open on this server")
+
+        hit("signup-ip", auth.client_ip(request), settings.limit_signup_per_ip)
+
+        try:
+            user = await auth.register(body.email, body.password, body.workspace_name)
+        except EmailTaken:
+            raise HTTPException(409, "An account with this email already exists") from None
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from None
+
+        response.set_cookie(
+            COOKIE,
+            await auth.start_session(user),
+            max_age=settings.auth_session_hours * 3600,
+            httponly=True,
+            samesite="lax",
+            secure=settings.cookie_secure,
+            path="/",
+        )
+        response.status_code = 201
+
+        return {"user": public_user(user)}
+
     @app.post("/api/auth/logout", status_code=204)
     async def logout(request: Request, response: Response) -> Response:
         await auth.end_session(request.cookies.get(COOKIE))
@@ -291,8 +397,14 @@ def create_app(
     async def start_call(request: StartCall, user: Annotated[dict | None, Depends(operator)]) -> dict[str, Any]:
         hit("calls", str(user["id"]), settings.limit_calls_per_user)
 
+        scope = confinement(user)
+
+        # The customers table is shared between organizations; a confined account has no business in it.
+        if scope is not None and request.customer_ref:
+            raise HTTPException(403, "Customer records are not available to your account")
+
         try:
-            session, greeting = await service.start_inbound(request.profile_id, request.customer_ref)
+            session, greeting = await service.start_inbound(request.profile_id, request.customer_ref, organization_id=scope)
         except (NotFound, Unavailable, TooManySessions) as error:
             raise translate(error) from None
 
@@ -348,16 +460,17 @@ def create_app(
 
     @app.get("/api/calls", dependencies=[Depends(business)])
     async def list_calls(
+        scope: Annotated[int | None, Depends(org_scope)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
         direction: Annotated[Literal["inbound", "outbound"] | None, Query()] = None,
     ) -> list[dict[str, Any]]:
-        """Finished calls, newest first: the call history."""
-        return await service.list_calls(limit, direction)
+        """Finished calls, newest first: the call history (a confined account sees only its own)."""
+        return await service.list_calls(limit, direction, scope)
 
     @app.get("/api/calls/{call_id}/result", dependencies=[Depends(business)])
-    async def call_result(call_id: str) -> dict[str, Any]:
+    async def call_result(call_id: str, scope: Annotated[int | None, Depends(org_scope)]) -> dict[str, Any]:
         try:
-            return await service.get_result(call_id)
+            return await service.get_result(call_id, scope)
         except NotFound as error:
             raise translate(error) from None
 
@@ -366,9 +479,11 @@ def create_app(
     Ref = Annotated[str, Path(pattern=r"^[A-Za-z0-9._-]{1,64}$")]
 
     @app.get("/api/customers", dependencies=[Depends(business)])
-    async def list_customers(profile_id: str) -> list[dict[str, Any]]:
-        """Who the agent can be pointed at for a profile (names only, no data)."""
-        return await service.list_customers(profile_id)
+    async def list_customers(profile_id: str, scope: Annotated[int | None, Depends(org_scope)]) -> list[dict[str, Any]]:
+        """Who the agent can be pointed at for a profile (names only, no data). The table is shared
+        between organizations, so a confined account is offered none of it (its own people are
+        Contacts)."""
+        return [] if scope is not None else await service.list_customers(profile_id)
 
     @app.get("/api/customers/{profile_id}/{ref}", dependencies=[Depends(admin_or_key)])
     async def get_customer(profile_id: str, ref: Ref) -> dict[str, Any]:
@@ -520,9 +635,23 @@ def create_app(
 
     @app.post("/api/call-jobs", status_code=201)
     async def create_job(
-        request: CallJobRequest, response: Response, who: Annotated[str, Depends(business)]
+        request: CallJobRequest,
+        response: Response,
+        who: Annotated[str, Depends(business)],
+        scope: Annotated[int | None, Depends(org_scope)],
     ) -> dict[str, Any]:
         hit("jobs", who, settings.limit_jobs_per_principal)
+
+        if scope is not None:
+            # A confined account creates jobs for its own organization only: whatever it names is
+            # checked against that organization (so another one's agents and contacts are out of
+            # reach), and the job is stamped with it (so the account can see the result).
+            if request.organization_id not in (None, scope):
+                raise HTTPException(403, "That organization is not yours")
+            if request.customer_ref:
+                raise HTTPException(403, "Customer records are not available to your account")
+
+            request = request.model_copy(update={"organization_id": scope})
 
         try:
             view, created = await service.create_job(request)
@@ -535,13 +664,15 @@ def create_app(
         return view
 
     @app.get("/api/call-jobs", dependencies=[Depends(business)])
-    async def list_jobs(limit: Annotated[int, Query(ge=1, le=200)] = 50) -> list[dict[str, Any]]:
-        return await service.list_jobs(limit)
+    async def list_jobs(
+        scope: Annotated[int | None, Depends(org_scope)], limit: Annotated[int, Query(ge=1, le=200)] = 50
+    ) -> list[dict[str, Any]]:
+        return await service.list_jobs(limit, scope)
 
     @app.get("/api/call-jobs/{job_id}", dependencies=[Depends(business)])
-    async def get_job(job_id: str) -> dict[str, Any]:
+    async def get_job(job_id: str, scope: Annotated[int | None, Depends(org_scope)]) -> dict[str, Any]:
         try:
-            return await service.get_job(job_id)
+            return await service.get_job(job_id, scope)
         except NotFound as error:
             raise translate(error) from None
 

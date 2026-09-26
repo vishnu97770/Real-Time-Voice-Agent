@@ -28,8 +28,13 @@ test("params are decoded, and a broken escape is not a match", () => {
 
 test("redirect routes say where they go", () => {
   assert.equal(matchRoute("/app").redirect, "/app/dashboard");
-  assert.equal(matchRoute("/signup").redirect, "/signin");
   assert.equal(matchRoute("/app/dashboard").redirect, null);
+});
+
+test("/signup is its own screen (it used to redirect to /signin)", () => {
+  assert.deepEqual(matchRoute("/signup"), { name: "signup", params: {}, redirect: null });
+  assert.equal(matchRoute("/signup/").name, "signup");
+  assert.equal(isAppRoute("signup"), false); // a public screen, not part of the application
 });
 
 test("unknown paths are not-found, never a blank page", () => {

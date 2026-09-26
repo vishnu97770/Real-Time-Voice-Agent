@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { authEvents } from "../runtime/api.js";
-import { login, logout } from "../runtime/auth.js";
+import { login, loginWithGoogle, logout, signup } from "../runtime/auth.js";
 import { AuthContext } from "./context.js";
 import { probeSession } from "./session.js";
 import { INITIAL, authReducer } from "./state.js";
@@ -54,6 +54,27 @@ export default function AuthProvider({ children }) {
     return user;
   }, []);
 
+  // Same contract as signIn, for the Google ID token (see runtime/auth.js).
+  const signInWithGoogle = useCallback(async (credential) => {
+    const user = await loginWithGoogle(credential);
+
+    generation.current += 1;
+    dispatch({ type: "signed-in", user });
+
+    return user;
+  }, []);
+
+  // Creates the account (with its own workspace) and signs it in: the server answers like login does,
+  // so the outcome is the same "signed-in" transition (and the same rule: never navigate from here).
+  const signUp = useCallback(async (email, password, workspaceName) => {
+    const user = await signup(email, password, workspaceName);
+
+    generation.current += 1;
+    dispatch({ type: "signed-in", user });
+
+    return user;
+  }, []);
+
   const signOut = useCallback(async () => {
     await logout(); // never throws: signing out here is what matters, the cookie expires on its own anyway
 
@@ -63,7 +84,10 @@ export default function AuthProvider({ children }) {
 
   const enterOffline = useCallback(() => dispatch({ type: "offline" }), []);
 
-  const value = useMemo(() => ({ ...state, signIn, signOut, retry, enterOffline }), [state, signIn, signOut, retry, enterOffline]);
+  const value = useMemo(
+    () => ({ ...state, signIn, signInWithGoogle, signUp, signOut, retry, enterOffline }),
+    [state, signIn, signInWithGoogle, signUp, signOut, retry, enterOffline],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

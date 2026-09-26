@@ -1,3 +1,4 @@
+import { useSignupOpen } from "../../auth/context.js";
 import Link from "../../router/Link.jsx";
 import Arrow from "../Arrow.jsx";
 import { scrollToSection } from "../hooks/scrollTo.js";
@@ -9,6 +10,8 @@ import "./CallToAction.css";
 // The end of the story. The orb comes back, large, and reacts to the button: the product's own
 // answer to "should I try it?" is to answer you.
 export default function CallToAction() {
+  const signupOpen = useSignupOpen();
+
   return (
     <section className="cta">
       <OrbAnchor name="cta" className="cta-orb" opacity={0.85} />
@@ -24,7 +27,7 @@ export default function CallToAction() {
 
         <Reveal className="cta-actions" delay={0.18}>
           <Link
-            to="/signin"
+            to={signupOpen ? "/signup" : "/signin"}
             transition
             className="lp-btn lp-btn--primary lp-btn--lg"
             onPointerEnter={() => pulse(1.1)}
@@ -47,7 +50,15 @@ export default function CallToAction() {
         </Reveal>
 
         <Reveal as="p" className="cta-note" delay={0.26}>
-          Already have an account? <Link to="/signin" transition>Sign in</Link>. New here? Ask your workspace administrator to add you.
+          {signupOpen ? (
+            <>
+              Already have an account? <Link to="/signin" transition>Sign in</Link>. New here? <Link to="/signup" transition>Create one</Link>.
+            </>
+          ) : (
+            <>
+              Sign-up is closed on this server. <Link to="/signin" transition>Sign in</Link> with the account your administrator created for you.
+            </>
+          )}
         </Reveal>
       </div>
     </section>

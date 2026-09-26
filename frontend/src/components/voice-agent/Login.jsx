@@ -34,14 +34,22 @@ export default function Login({ onSignedIn }) {
 
       <main className="callee-card">
         <div className="login-orb">
-          <VoiceOrb state="idle" icon="agent" label="Ready to take calls" size="sm" />
+          <VoiceOrb
+            state="idle"
+            icon="agent"
+            label="Ready to take calls"
+            size="sm"
+          />
         </div>
 
         <h2>Sign in</h2>
-        <p className="callee-note">Operators only. Ask an administrator for an account.</p>
+        <p className="callee-note">
+          Operators only. Ask an administrator for an account.
+        </p>
 
         <form className="login-form" onSubmit={submit}>
           <label htmlFor="login-email">Email</label>
+
           <input
             id="login-email"
             type="email"
@@ -52,6 +60,7 @@ export default function Login({ onSignedIn }) {
           />
 
           <label htmlFor="login-password">Password</label>
+
           <input
             id="login-password"
             type="password"
@@ -67,7 +76,11 @@ export default function Login({ onSignedIn }) {
             </p>
           )}
 
-          <button className="callee-answer login-button" type="submit" disabled={busy || !email || !password}>
+          <button
+            className="callee-answer login-button"
+            type="submit"
+            disabled={busy || !email || !password}
+          >
             {busy ? "Signing in..." : "Sign in"}
           </button>
         </form>

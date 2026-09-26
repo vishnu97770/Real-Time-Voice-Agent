@@ -528,13 +528,38 @@ There are three kinds of caller, each with its own credential:
 | Callee | the unguessable token in their link | answer or decline that one call |
 
 Sign-in is **on by default** (`AUTH_REQUIRED=true`); there is no default account. Manage users
-with `python -m app.cli create-user | list-users | disable-user | set-password`. Passwords are
+with `python -m app.cli create-user | list-users | disable-user | set-password`, or let people
+create their own (see **Self-service sign-up** below). Passwords are
 hashed with scrypt (12+ characters), the cookie is `HttpOnly` and `SameSite=Lax` (set
 `COOKIE_SECURE=true` behind https), only a hash of each session token is stored, and disabling a
 user signs them out at once. A signed-in browser's writes are refused if their `Origin` is not
 the frontend's. Login gives the same answer for an unknown email and a wrong password.
 
-**Rate limits** (per minute, in memory): login per address and per account, callee-link guessing
+### Self-service sign-up
+
+`POST /api/auth/signup` (`{ email, password, workspace_name }`) creates an account **together with a
+workspace of its own** and signs it in, answering exactly like `/api/auth/login` (`201 { user }` and
+the session cookie). It is **on by default**; set `SIGNUP_ENABLED=false` to close it (the health
+check reports `signup_enabled`, and the frontend then stops offering it). It is rate limited per
+address (`LIMIT_SIGNUP_PER_IP`, default 5 a minute).
+
+What a self-service account is, and is not:
+
+- It is always an **operator**, never an admin. Admins can edit the customer data shared between
+  organizations, so that power is not handed out by a public form.
+- It is **confined to its own organization**. An operator who belongs to an organization sees only
+  that organization's calls, jobs and call results (list *and* by id: another organization's job or
+  result is a plain `404`), is offered none of the shared customers table, and can create jobs only
+  for its own organization. Administrators, accounts that predate organizations, business systems
+  (API key) and a server with sign-in switched off are **not** confined and see what they always saw.
+- There is **no email verification** (nothing here sends email), so anyone can register any address
+  they type. Google sign-in matches an existing account by verified email, which means a
+  self-service account created with someone else's address could be picked up by them later. If
+  that matters for you, keep sign-up closed, or add verification before opening it.
+- If real telephony is configured, an account can place outbound phone calls. Close sign-up
+  (`SIGNUP_ENABLED=false`) unless you want strangers able to do that.
+
+**Rate limits** (per minute, in memory): login per address and per account, sign-up per address, callee-link guessing
 per address, job creation per caller, calls started per operator, turns per call. Over the limit
 is a `429` with `Retry-After`. Behind a reverse proxy set `TRUSTED_PROXY_HOPS`, or every client
 looks like the proxy. The limits are per process: with several workers, move them to Redis or

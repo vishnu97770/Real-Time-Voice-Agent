@@ -115,7 +115,14 @@ export default function RealtimeMatters() {
     () =>
       subscribeScroll({
         read: ({ vh }) => {
-          const rect = rootRef.current.getBoundingClientRect();
+          const element = rootRef.current;
+
+          // React clears this ref the moment the section leaves the page, a little before this
+          // subscription is removed (see Chapters.jsx): a frame that lands in between has nothing to
+          // measure.
+          if (!element) return 0;
+
+          const rect = element.getBoundingClientRect();
 
           return Math.min(1, Math.max(0, (vh - rect.top) / (vh + rect.height)));
         },

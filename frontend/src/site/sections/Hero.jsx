@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSignupOpen } from "../../auth/context.js";
 import Link from "../../router/Link.jsx";
 import Arrow from "../Arrow.jsx";
 import { scrollToSection } from "../hooks/scrollTo.js";
@@ -35,6 +36,7 @@ export default function Hero() {
   const [phase, setPhase] = useState(0);
   const [visible, setVisible] = useState(true);
   const mic = useMicrophone();
+  const signupOpen = useSignupOpen();
   const talking = mic.state === "on";
 
   // Peel away as the visitor leaves: copy drifts up and fades, the orb (an anchor, so its box is
@@ -124,7 +126,7 @@ export default function Hero() {
           </p>
 
           <div className="hero-actions">
-            <Link to="/signin" transition className="lp-btn lp-btn--primary" onPointerEnter={() => pulse(0.9)} onFocus={() => pulse(0.9)}>
+            <Link to={signupOpen ? "/signup" : "/signin"} transition className="lp-btn lp-btn--primary" onPointerEnter={() => pulse(0.9)} onFocus={() => pulse(0.9)}>
               Get started <Arrow />
             </Link>
             <a

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "../auth/context.js";
+import { useAuth, useSignupOpen } from "../auth/context.js";
 import { canEnterApp } from "../auth/state.js";
 import Link from "../router/Link.jsx";
 import Arrow from "./Arrow.jsx";
@@ -18,6 +18,7 @@ export default function Nav() {
   const ref = useRef(null);
   const [open, setOpen] = useState(false);
   const inApp = canEnterApp(status);
+  const signupOpen = useSignupOpen();
 
   // Solid, blurred bar once the page has moved; transparent over the hero.
   useEffect(
@@ -70,12 +71,15 @@ export default function Nav() {
             </Link>
           ) : (
             <>
-              <Link to="/signin" transition className="lp-nav-signin">
-                Sign in
+              {/* with sign-up open, "Sign in" is the quiet link and "Sign up" the button; with it closed, sign-in is the only way in */}
+              <Link to="/signin" transition className={signupOpen ? "lp-nav-signin" : "lp-btn lp-btn--primary lp-btn--sm"}>
+                Sign in {!signupOpen && <Arrow size={16} />}
               </Link>
-              <Link to="/signin" transition className="lp-btn lp-btn--primary lp-btn--sm">
-                Get started <Arrow size={16} />
-              </Link>
+              {signupOpen && (
+                <Link to="/signup" transition className="lp-btn lp-btn--primary lp-btn--sm">
+                  Sign up <Arrow size={16} />
+                </Link>
+              )}
             </>
           )}
         </div>
@@ -92,9 +96,22 @@ export default function Nav() {
             {label}
           </a>
         ))}
-        <Link to={inApp ? "/app/dashboard" : "/signin"} transition tabIndex={open ? 0 : -1} className="lp-btn lp-btn--primary">
-          {inApp ? "Open app" : "Get started"} <Arrow size={16} />
-        </Link>
+        {inApp ? (
+          <Link to="/app/dashboard" transition tabIndex={open ? 0 : -1} className="lp-btn lp-btn--primary">
+            Open app <Arrow size={16} />
+          </Link>
+        ) : (
+          <>
+            <Link to="/signin" transition tabIndex={open ? 0 : -1} className={signupOpen ? "lp-btn lp-btn--ghost" : "lp-btn lp-btn--primary"}>
+              Sign in
+            </Link>
+            {signupOpen && (
+              <Link to="/signup" transition tabIndex={open ? 0 : -1} className="lp-btn lp-btn--primary">
+                Sign up <Arrow size={16} />
+              </Link>
+            )}
+          </>
+        )}
       </div>
     </header>
   );

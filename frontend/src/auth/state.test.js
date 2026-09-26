@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { INITIAL, STATUSES, authReducer, canEnterApp } from "./state.js";
+import { INITIAL, SESSION_EXPIRED, STATUSES, authReducer, canEnterApp } from "./state.js";
 
 const probed = (status, extra = {}) => ({ type: "probed", result: { status, user: null, error: null, backend: { ...INITIAL.backend, reachable: true }, ...extra } });
 
@@ -53,7 +53,26 @@ test("logout: authenticated -> unauthenticated, user cleared", () => {
 test("an expired session (any API call answered 401) signs an authenticated user out", () => {
   const inState = authReducer(INITIAL, probed("authenticated", { user: { email: "a@b.c" } }));
 
-  assert.equal(authReducer(inState, { type: "expired" }).status, "unauthenticated");
+  const next = authReducer(inState, { type: "expired" });
+
+  assert.equal(next.status, "unauthenticated");
+  assert.equal(next.user, null);
+});
+
+test("an expired session leaves a message for the sign-in screen; signing out on purpose does not", () => {
+  const inState = authReducer(INITIAL, probed("authenticated", { user: { email: "a@b.c" } }));
+
+  assert.equal(authReducer(inState, { type: "expired" }).error, SESSION_EXPIRED);
+  assert.equal(authReducer(inState, { type: "signed-out" }).error, null);
+});
+
+test("the expiry message does not outlive the next sign-in, retry or probe", () => {
+  const inState = authReducer(INITIAL, probed("authenticated", { user: { email: "a@b.c" } }));
+  const expired = authReducer(inState, { type: "expired" });
+
+  assert.equal(authReducer(expired, { type: "signed-in", user: { email: "a@b.c" } }).error, null);
+  assert.equal(authReducer(expired, { type: "retry" }).error, null);
+  assert.equal(authReducer(expired, probed("unauthenticated")).error, null);
 });
 
 test("a 401 while already signed out (e.g. the wrong password) is not news", () => {

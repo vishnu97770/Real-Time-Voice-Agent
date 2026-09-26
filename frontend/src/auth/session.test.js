@@ -154,3 +154,20 @@ test("whatever the server does, the result is never 'initializing'", async () =>
     assert.ok(["open", "authenticated", "unauthenticated", "unavailable"].includes(result.status));
   }
 });
+
+test("the health check's sign-up flag is passed on: open by default, closed only when the server says false", async () => {
+  const open = await probeSession({ fetchImpl: server({ "/api/health": json(200, { auth_required: true, signup_enabled: true }), "/api/auth/me": json(401, {}) }).fetchImpl });
+  const closed = await probeSession({ fetchImpl: server({ "/api/health": json(200, { auth_required: true, signup_enabled: false }), "/api/auth/me": json(401, {}) }).fetchImpl });
+  const older = await probeSession({ fetchImpl: server({ "/api/health": HEALTH_AUTH, "/api/auth/me": json(401, {}) }).fetchImpl }); // predates sign-up: says nothing
+
+  assert.equal(open.backend.signupEnabled, true);
+  assert.equal(closed.backend.signupEnabled, false);
+  assert.equal(older.backend.signupEnabled, true);
+});
+
+test("an unreachable server does not hide the Sign up links (the sign-up screen explains itself)", async () => {
+  const result = await probeSession({ fetchImpl: server({ "/api/health": new TypeError("down") }).fetchImpl });
+
+  assert.equal(result.status, "unavailable");
+  assert.equal(result.backend.signupEnabled, true);
+});

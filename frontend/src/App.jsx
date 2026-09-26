@@ -9,6 +9,7 @@ import { isAppRoute } from "./router/router.js";
 
 const Landing = lazy(() => import("./site/Landing.jsx"));
 const SignIn = lazy(() => import("./site/SignIn.jsx"));
+const SignUp = lazy(() => import("./site/SignUp.jsx"));
 const OperatorConsole = lazy(() => import("./app/OperatorConsole.jsx"));
 const CalleeRoute = lazy(() => import("./app/CalleeRoute.jsx"));
 
@@ -26,6 +27,7 @@ function Screen() {
 
   if (route === "landing") return <Landing />;
   if (route === "signin") return <SignIn />;
+  if (route === "signup") return <SignUp />;
 
   if (isAppRoute(route)) {
     return (

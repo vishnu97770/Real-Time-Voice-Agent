@@ -111,7 +111,7 @@ class Service:
         session.persist = lambda data: self._db(self.repo.save_customer_data, profile_id, ref, data)
 
     async def start_inbound(
-        self, profile_id: str, customer_ref: str | None = None, channel: str = "web"
+        self, profile_id: str, customer_ref: str | None = None, channel: str = "web", organization_id: int | None = None
     ) -> tuple[Session, str]:
         if self.brain is None:
             raise Unavailable("No LLM is configured on the server")
@@ -129,6 +129,7 @@ class Service:
 
         session = create_session(profile, self.brain, self.settings.brain_timeout_seconds, **extra)
         session.channel = channel
+        session.organization_id = organization_id
         self._bind_customer(session)
         self.store.add(session)
 
@@ -523,22 +524,26 @@ class Service:
 
         return await self._db(self.repo.get_job, row["id"])
 
-    async def get_job(self, job_id: str) -> dict[str, Any]:
+    async def get_job(self, job_id: str, organization_id: int | None = None) -> dict[str, Any]:
+        """With `organization_id`, a job of another organization is "unknown", the same answer as a job
+        that does not exist, so ids cannot be probed across organizations."""
         row = await self._fresh_job(job_id)
 
-        if row is None:
+        if row is None or (organization_id is not None and row.get("organization_id") != organization_id):
             raise NotFound("Unknown job")
 
         return job_view(row, await self._result(row))
 
-    async def list_jobs(self, limit: int) -> list[dict[str, Any]]:
-        return [job_view(row) for row in await self._db(self.repo.list_jobs, limit)]
+    async def list_jobs(self, limit: int, organization_id: int | None = None) -> list[dict[str, Any]]:
+        return [job_view(row) for row in await self._db(self.repo.list_jobs, limit, organization_id)]
 
-    async def list_calls(self, limit: int, direction: str | None) -> list[dict[str, Any]]:
-        return await self._db(self.repo.list_results, limit, direction)
+    async def list_calls(
+        self, limit: int, direction: str | None, organization_id: int | None = None
+    ) -> list[dict[str, Any]]:
+        return await self._db(self.repo.list_results, limit, direction, organization_id)
 
-    async def get_result(self, call_id: str) -> dict[str, Any]:
-        result = await self._db(self.repo.get_result, call_id)
+    async def get_result(self, call_id: str, organization_id: int | None = None) -> dict[str, Any]:
+        result = await self._db(self.repo.get_result, call_id, organization_id)
 
         if result is None:
             raise NotFound("No result for that call")
@@ -699,6 +704,10 @@ class Service:
 
     async def _finalize(self, session: Session) -> dict[str, Any]:
         summary = close_session(session)
+
+        # Who the result belongs to, for a console call opened by an organization's own account.
+        if session.organization_id is not None:
+            summary["organization_id"] = session.organization_id
 
         # A phone line stays open until we say otherwise, whoever ended the call.
         if session.hangup is not None:

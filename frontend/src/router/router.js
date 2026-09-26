@@ -6,7 +6,7 @@
 export const ROUTES = [
   { name: "landing", path: "/" },
   { name: "signin", path: "/signin" },
-  { name: "signup", path: "/signup", redirect: "/signin" },
+  { name: "signup", path: "/signup" },
   { name: "app", path: "/app", redirect: "/app/dashboard" },
   { name: "dashboard", path: "/app/dashboard" },
   { name: "agents", path: "/app/agents" },

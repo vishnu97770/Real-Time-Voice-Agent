@@ -12,6 +12,7 @@ import time
 from typing import Any
 from urllib.parse import urlsplit
 
+from sqlalchemy.exc import IntegrityError
 from starlette.requests import Request
 
 from app.config import Settings
@@ -21,6 +22,10 @@ from app.security import DUMMY_HASH, hash_password, hash_token, new_token, verif
 COOKIE = "va_session"
 ROLES = ("admin", "operator")
 UNSAFE_METHODS = ("POST", "PUT", "PATCH", "DELETE")
+
+
+class EmailTaken(Exception):
+    """Sign-up with an email that already has an account."""
 
 
 def public_user(user: dict[str, Any]) -> dict[str, Any]:
@@ -47,6 +52,29 @@ class Auth:
             raise ValueError("That does not look like an email address")
 
         return self.repo.create_user(email, hash_password(password), role)
+
+    async def register(self, email: str, password: str, workspace_name: str) -> dict[str, Any]:
+        """Self-service sign-up: a new operator and a workspace (organization) of their own.
+
+        Always the "operator" role: administrators can edit customer data that is shared between
+        organizations, so that power is never handed out by a public form. Raises ValueError for
+        input we refuse (message fit to show) and EmailTaken for a duplicate."""
+        email = email.strip()
+        workspace_name = " ".join(workspace_name.split())
+
+        if "@" not in email or len(email) > 254:
+            raise ValueError("That does not look like an email address")
+        if not workspace_name:
+            raise ValueError("Give your workspace a name")
+
+        # hash_password enforces the password policy (raises ValueError with the reason); scrypt is
+        # deliberately slow, so it runs off the event loop like verify_password does.
+        password_hash = await asyncio.to_thread(hash_password, password)
+
+        try:
+            return await self._db(self.repo.create_account, email, password_hash, "operator", workspace_name)
+        except IntegrityError:
+            raise EmailTaken(email) from None
 
     async def authenticate(self, email: str, password: str) -> dict[str, Any] | None:
         user = await self._db(self.repo.get_user_by_email, email)

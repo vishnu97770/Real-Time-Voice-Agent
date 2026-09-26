@@ -51,6 +51,11 @@ class Settings(BaseSettings):
 
     # Operator sign-in. On by default: the console and its call endpoints need a login.
     # Create the first user with: python -m app.cli create-user
+    google_client_id: str | None = None
+    # Self-service sign-up (POST /api/auth/signup): anyone may create an account, which comes with a
+    # workspace of its own and the "operator" role (never admin). Set SIGNUP_ENABLED=false to close it,
+    # e.g. once real telephony is configured and you do not want strangers able to place calls.
+    signup_enabled: bool = True
     auth_required: bool = True
     auth_session_hours: int = 12
     cookie_secure: bool = False  # set true when served over https (always, in production)
@@ -60,6 +65,7 @@ class Settings(BaseSettings):
 
     # Requests per minute. The window is one minute.
     limit_login_per_ip: int = 10
+    limit_signup_per_ip: int = 5
     limit_login_per_email: int = 5
     limit_callee_per_ip: int = 30
     limit_jobs_per_principal: int = 60

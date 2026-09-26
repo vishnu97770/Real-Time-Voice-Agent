@@ -282,16 +282,26 @@ class Repository:
             return _row_dict(row) if row else None
 
     @locked
-    def get_job(self, job_id: str) -> dict[str, Any] | None:
+    def get_job(self, job_id: str, organization_id: int | None = None) -> dict[str, Any] | None:
+        """With `organization_id`, a job of any other organization (or of none) reads as missing."""
         with self._sessions() as db:
             row = db.get(JobRow, job_id)
+
+            if row is not None and organization_id is not None and row.organization_id != organization_id:
+                return None
+
             return _row_dict(row) if row else None
 
     @locked
-    def list_jobs(self, limit: int) -> list[dict[str, Any]]:
+    def list_jobs(self, limit: int, organization_id: int | None = None) -> list[dict[str, Any]]:
+        """Newest first. With `organization_id`, only that organization's jobs."""
         with self._sessions() as db:
-            rows = db.scalars(select(JobRow).order_by(JobRow.created_at.desc()).limit(limit))
-            return [_row_dict(row) for row in rows]
+            query = select(JobRow).order_by(JobRow.created_at.desc()).limit(limit)
+
+            if organization_id is not None:
+                query = query.where(JobRow.organization_id == organization_id)
+
+            return [_row_dict(row) for row in db.scalars(query)]
 
     @locked
     def transition(self, job_id: str, from_statuses: list[str], to_status: str, **fields: Any) -> bool:
@@ -545,6 +555,33 @@ class Repository:
             return _row_dict(row)
 
     @locked
+    def create_account(self, email: str, password_hash: str, role: str, organization_name: str) -> dict[str, Any]:
+        """A new user together with the organization they will work in, in one transaction: afterwards
+        either both exist or neither does, so a taken email leaves no stray organization behind.
+        Raises IntegrityError when the email is already registered."""
+        with self._sessions() as db:
+            organization = Organization(name=organization_name)
+
+            try:
+                db.add(organization)
+                db.flush()  # the organization's id is needed for the user
+                row = UserRow(
+                    email=email.lower(),
+                    password_hash=password_hash,
+                    role=role,
+                    disabled=0,
+                    created_at=time.time(),
+                    organization_id=organization.id,
+                )
+                db.add(row)
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+                raise
+
+            return _row_dict(row)
+
+    @locked
     def get_user_by_email(self, email: str) -> dict[str, Any] | None:
         with self._sessions() as db:
             row = db.scalar(select(UserRow).where(UserRow.email == email.lower()))
@@ -650,7 +687,13 @@ class Repository:
             # The column exists for "the results of organization X". A result has no tenant of its own:
             # it belongs to its call job's (NULL for a job that predates organizations, and for an
             # inbound call, which has no job).
-            organization_id = db.scalar(select(JobRow.organization_id).where(JobRow.id == job_id)) if job_id else None
+            # A call the operator started in the console has no job: it belongs to the organization the
+            # session was opened for, when there is one (self-service accounts always have one).
+            organization_id = (
+                db.scalar(select(JobRow.organization_id).where(JobRow.id == job_id))
+                if job_id
+                else summary.get("organization_id")
+            )
             db.merge(
                 ResultRow(
                     call_id=summary["call_id"],
@@ -666,10 +709,18 @@ class Repository:
             db.commit()
 
     @locked
-    def list_results(self, limit: int, direction: str | None = None) -> list[dict[str, Any]]:
-        """Finished calls, newest first, as short rows (no transcript or audit)."""
+    def list_results(
+        self, limit: int, direction: str | None = None, organization_id: int | None = None
+    ) -> list[dict[str, Any]]:
+        """Finished calls, newest first, as short rows (no transcript or audit). With `organization_id`,
+        only that organization's calls."""
         with self._sessions() as db:
-            rows = db.scalars(select(ResultRow).order_by(ResultRow.started_at.desc()).limit(limit * 3))
+            query = select(ResultRow).order_by(ResultRow.started_at.desc()).limit(limit * 3)
+
+            if organization_id is not None:
+                query = query.where(ResultRow.organization_id == organization_id)
+
+            rows = db.scalars(query)
             out = []
 
             for row in rows:
@@ -701,7 +752,12 @@ class Repository:
             return out
 
     @locked
-    def get_result(self, call_id: str) -> dict[str, Any] | None:
+    def get_result(self, call_id: str, organization_id: int | None = None) -> dict[str, Any] | None:
+        """With `organization_id`, a result of any other organization (or of none) reads as missing."""
         with self._sessions() as db:
             row = db.get(ResultRow, call_id)
+
+            if row is not None and organization_id is not None and row.organization_id != organization_id:
+                return None
+
             return row.payload if row else None

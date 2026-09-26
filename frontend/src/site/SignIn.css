@@ -26,14 +26,19 @@
   overflow: hidden;
 }
 
-.signin-orb {
-  position: relative;
-  width: min(46vh, 34vw);
-  aspect-ratio: 1;
+/* The 3D orb (see stage/) is one fixed, transparent canvas that flies to this box. Layering, back to
+   front: the panel's own background, the canvas, then the panel's text and wave and the form. */
+.signin .stage-host {
+  z-index: 1;
 }
 
-.signin-orb .static-orb {
-  opacity: 1;
+.signin-art > :not(.signin-orb) {
+  position: relative;
+  z-index: 2;
+}
+
+.signin-orb {
+  width: min(46vh, 34vw);
 }
 
 .signin-wave {
@@ -72,7 +77,8 @@
 .signin-card {
   display: grid;
   gap: 18px;
-  width: min(100%, 420px);
+  /* 400px is the widest Google's button can be, so the fields and the button share one width */
+  width: min(100%, 400px);
   animation: signin-in 0.9s var(--ease-out) both;
 }
 
@@ -271,4 +277,127 @@
 
 .signin-banner button:hover {
   border-color: rgba(var(--brand-rgb), 0.7);
+}
+
+/* ------------------------------------------------------------------ Google sign-in */
+
+.signin-alt {
+  display: grid;
+  gap: 16px;
+}
+
+/* "or", with a hairline either side */
+.signin-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lp-dim);
+}
+
+.signin-divider::before,
+.signin-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--lp-line-2);
+}
+
+.signin-google {
+  display: grid;
+  min-height: 44px;
+  align-items: center;
+  transition: opacity 0.25s;
+}
+
+/* Google's button is an iframe from another origin. This page declares color-scheme: dark, and a
+   cross-origin iframe whose scheme differs from its parent's gets an opaque white backdrop (the
+   white block around the button). Declaring light on the element that holds the iframe makes the
+   schemes match, so the backdrop stays transparent and the dark button sits on the dark card. */
+.signin-google-button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  color-scheme: light;
+}
+
+/* while Google's script is still arriving: a quiet placeholder the same size as the button */
+.signin-google.is-loading .signin-google-button {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  animation: google-wait 1.4s ease-in-out infinite;
+}
+
+@keyframes google-wait {
+  50% { opacity: 0.45; }
+}
+
+/* a sign-in is under way: the button cannot be pressed twice */
+.signin-google.is-busy {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.signin-google-note,
+.signin-status {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--lp-muted);
+}
+
+.signin-status {
+  text-align: center;
+}
+
+/* the session ended underneath you: informative, not an error */
+.signin-notice {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(var(--brand-rgb), 0.45);
+  border-radius: 12px;
+  background: rgba(var(--brand-rgb), 0.08);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--lp-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signin-google.is-loading .signin-google-button {
+    animation: none;
+  }
+
+  .signin-google {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ sign-up form bits */
+
+/* the one line that tells you what is wrong with a field, right under it */
+.signin-field-error {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #f6a5ad;
+}
+
+/* what a good password looks like: quiet until there is something to correct */
+.signin-hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--lp-dim);
+}
+
+.signin-form input[aria-invalid="true"] {
+  border-color: rgba(240, 123, 134, 0.6);
+}
+
+.signin-error a {
+  color: var(--lp-text);
+  text-underline-offset: 3px;
 }

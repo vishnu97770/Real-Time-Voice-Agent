@@ -1,7 +1,10 @@
 import Logo from "./Logo.jsx";
+import { useSignupOpen } from "../auth/context.js";
 import Link from "../router/Link.jsx";
 
 export default function NotFound() {
+  const signupOpen = useSignupOpen();
+
   return (
     <div className="gate">
       <div className="gate-card">
@@ -15,6 +18,11 @@ export default function NotFound() {
           <Link to="/signin" className="gate-btn">
             Sign in
           </Link>
+          {signupOpen && (
+            <Link to="/signup" className="gate-btn">
+              Sign up
+            </Link>
+          )}
         </div>
       </div>
     </div>

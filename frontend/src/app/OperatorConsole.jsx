@@ -42,7 +42,9 @@ const VIEW_FOR_ROUTE = {
   settings: "settings",
 };
 
-// ...and the reverse: where each screen lives. "applications" has no page of its own yet.
+// ...and the reverse: where each screen lives. "applications" and "profile" have no URL of their own
+// (Profile is a screen of the account menu, not a section of Settings), so they are remembered by
+// the console instead.
 const PATH_FOR_VIEW = {
   home: "/app/dashboard",
   history: "/app/calls",
@@ -50,7 +52,6 @@ const PATH_FOR_VIEW = {
   workflows: "/app/workflows",
   analytics: "/app/analytics",
   settings: "/app/settings",
-  profile: "/app/settings",
 };
 
 const DEFAULT_THEME = "dark";

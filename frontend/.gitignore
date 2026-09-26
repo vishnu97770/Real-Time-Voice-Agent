@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Local environment (Google client id and the like): never committed
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

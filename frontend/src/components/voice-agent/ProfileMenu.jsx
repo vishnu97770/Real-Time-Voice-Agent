@@ -1,16 +1,18 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Icon from "./Icon";
-import { displayName } from "../../runtime/format.js";
 
 // The signed-in user's menu: account pages, appearance and sign out. Settings
-// lives here rather than in the sidebar.
+// lives here rather than in the sidebar. It shows only what the server actually says about the
+// person (their email and role); no name or picture is made up.
+const capitalize = (text) => (text ? text[0].toUpperCase() + text.slice(1) : "");
 export default function ProfileMenu({ user, theme, onToggleTheme, onNavigate, onSignOut }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
   const menuId = useId();
 
-  const name = displayName(user);
+  const email = user?.email ?? null;
+  const role = capitalize(user?.role);
   const isDark = theme === "dark";
 
   useEffect(() => {
@@ -63,16 +65,16 @@ export default function ProfileMenu({ user, theme, onToggleTheme, onNavigate, on
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen(!open)}
       >
-        <span className="avatar">{name[0].toUpperCase()}</span>
-        <span className="profile-name">{name}</span>
+        <span className="avatar">{email ? email[0].toUpperCase() : <Icon name="user" size={16} />}</span>
+        <span className="profile-name">{email ?? "Local session"}</span>
         <Icon name="chevronDown" size={16} />
       </button>
 
       {open && (
         <div className="profile-dropdown" id={menuId} role="menu" aria-label="Account">
           <div className="profile-dropdown-head">
-            <strong>{name}</strong>
-            <span>{user?.email ?? "Local session (no sign-in)"}</span>
+            <strong>{email ?? "Local session"}</strong>
+            <span>{email ? role : "Not signed in (offline mode)"}</span>
           </div>
 
           <button type="button" role="menuitem" onClick={choose(() => onNavigate("profile"))}>

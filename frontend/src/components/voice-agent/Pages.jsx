@@ -1,5 +1,4 @@
 import Icon from "./Icon";
-import { displayName } from "../../runtime/format.js";
 
 // A destination that exists in the navigation but is not built yet. It says so
 // instead of showing invented data.
@@ -24,17 +23,19 @@ export function ProfilePage({ user }) {
 
       <dl className="page-facts">
         <div>
-          <dt>Name</dt>
-          <dd>{displayName(user)}</dd>
-        </div>
-        <div>
           <dt>Email</dt>
           <dd>{user?.email ?? "Not signed in (offline mode)"}</dd>
         </div>
         {user?.role && (
           <div>
             <dt>Role</dt>
-            <dd>{user.role}</dd>
+            <dd>{user.role[0].toUpperCase() + user.role.slice(1)}</dd>
+          </div>
+        )}
+        {user?.organization_id != null && (
+          <div>
+            <dt>Organization ID</dt>
+            <dd>{user.organization_id}</dd>
           </div>
         )}
       </dl>

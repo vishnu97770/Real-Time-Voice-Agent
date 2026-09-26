@@ -33,6 +33,7 @@ export function decideApp({ status, path = "/app/dashboard", search = "" }) {
   }
 }
 
+// For /signin and /signup alike: someone who is already signed in has no use for either screen.
 export function decideSignIn({ status, next }) {
   // Already in: straight to where they were headed (only in-app destinations are honoured).
   if (status === "authenticated") return { kind: "redirect", to: safeNext(next, DEFAULT_LANDING) };

@@ -32,6 +32,11 @@ export default function Chapters() {
 
           if (key === last.current) return;
 
+          // React clears these refs the moment the component leaves the page, but this subscription
+          // is only removed a little later (in the effect cleanup). A scroll frame that lands in
+          // between finds the elements gone; there is nothing left to update, so skip it.
+          if (!numberRef.current || !nameRef.current) return;
+
           last.current = key;
           numberRef.current.textContent = `${String(index + 1).padStart(2, "0")} / ${String(count).padStart(2, "0")}`;
           nameRef.current.textContent = name;

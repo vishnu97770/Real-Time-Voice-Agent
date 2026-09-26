@@ -17,7 +17,9 @@ import { API_BASE } from "../runtime/api.js";
 
 export const PROBE_TIMEOUT_MS = 5000;
 
-const UNKNOWN_BACKEND = { reachable: false, available: false, authRequired: false, brain: null, telephony: false };
+// signupEnabled defaults to true when unknown: a server that cannot be reached should not make the
+// Sign up links disappear (the sign-up screen itself explains a closed or unreachable server).
+const UNKNOWN_BACKEND = { reachable: false, available: false, authRequired: false, brain: null, telephony: false, signupEnabled: true };
 
 const unavailable = (error, backend = UNKNOWN_BACKEND) => ({ status: "unavailable", user: null, backend, error });
 
@@ -49,6 +51,8 @@ export async function probeSession({ fetchImpl = globalThis.fetch.bind(globalThi
     authRequired: Boolean(health?.auth_required),
     brain: health?.brain ?? null,
     telephony: Boolean(health?.telephony),
+    // only an explicit "false" closes it (a server that predates sign-up sends nothing)
+    signupEnabled: health?.signup_enabled !== false,
   };
 
   if (!backend.authRequired) return { status: "open", user: null, backend, error: null };
