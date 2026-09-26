@@ -10,7 +10,7 @@ from app.config import Settings
 from app.db import Repository
 from app.main import create_app
 from app.outbound import UnsafeCallbackURL, check_callback_url, sign_payload, verify_signature
-from tests.helpers import ScriptedBrain
+from tests.helpers import ScriptedBrain, migrate
 from tests.test_api import parse_sse
 
 KEY = {"X-API-Key": "test-key"}
@@ -483,6 +483,7 @@ def test_signatures_reject_tampering_replays_and_the_wrong_secret():
 
 async def test_jobs_and_results_survive_a_restart(tmp_path):
     url = f"sqlite:///{tmp_path / 'agent.db'}"
+    migrate(url)
     first = Env(repo=Repository(url))
     job = await first.job()
     call_id = (await first.answer(job))[0].json()["call_id"]

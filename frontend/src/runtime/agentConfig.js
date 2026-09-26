@@ -195,6 +195,78 @@ export function sameConfig(a, b) {
   return JSON.stringify(normalizeConfig(a)) === JSON.stringify(normalizeConfig(b));
 }
 
+// --- the backend Agent (Step 18B: app/schemas/agent.py) ---------------------------------------
+//
+// Field mapping (see the Step 18B report for the full audit):
+//
+//   agentName              -> name
+//   role                   -> role
+//   industry/industryOther -> industry          ("Other" resolved to what was typed, like resolveConfig)
+//   purpose                -> purpose
+//   targetUsers            -> target_users
+//   primaryTasks           -> primary_tasks
+//   conversationBehavior   -> behavior_config.tone   (a list; the backend column is a free dict,
+//                                                      so this is the one key this app writes to it)
+//   domainContext          -> instructions.domain_context
+//   additionalInstructions -> instructions.additional_instructions
+//   language/languageOther -> language          (sent verbatim: the backend column is an unconstrained
+//                                                 string, so there is no code to translate to or from)
+//   voice                  -> voice
+//
+// `id`, `organization_id` and `status` are never sent from here: the server decides all three
+// (POST assigns id/organization_id from who is asking; status is set server-side on create - see
+// the Step 18B report for why).
+
+// The shape POST/PUT /api/agents reads. Null unless the form is valid (same rule as resolveConfig,
+// which this is built on).
+export function toAgentPayload(config) {
+  const value = resolveConfig(config);
+
+  if (!value) return null;
+
+  return {
+    name: value.agentName,
+    role: value.role,
+    industry: value.industry,
+    purpose: value.purpose,
+    target_users: value.targetUsers,
+    primary_tasks: value.primaryTasks,
+    behavior_config: { tone: value.conversationBehavior },
+    instructions: { domain_context: value.domainContext, additional_instructions: value.additionalInstructions },
+    language: value.language,
+    voice: value.voice || null,
+  };
+}
+
+// The reverse: an AgentResponse (GET/POST/PUT's JSON body) back into the form's own shape. A
+// stored value that is no longer one of the fixed choices (industry, language, a behavior chip)
+// is not dropped: it round-trips through "Other"/"Custom", exactly as if the operator had just
+// typed it, so nothing saved through this app can ever be silently lost by loading it back.
+export function fromAgentPayload(agent) {
+  const storedBehaviors = Array.isArray(agent.behavior_config?.tone) ? agent.behavior_config.tone : [];
+  const knownBehaviors = storedBehaviors.filter((item) => BEHAVIORS.includes(item) && item !== CUSTOM);
+  const customBehavior = storedBehaviors.find((item) => !BEHAVIORS.includes(item));
+  const knownIndustry = INDUSTRIES.includes(agent.industry) ? agent.industry : agent.industry ? OTHER : "";
+  const knownLanguage = LANGUAGES.includes(agent.language) ? agent.language : agent.language ? OTHER : "English";
+
+  return normalizeConfig({
+    industry: knownIndustry,
+    industryOther: knownIndustry === OTHER ? agent.industry : "",
+    agentName: agent.name ?? "",
+    role: agent.role ?? "",
+    purpose: agent.purpose ?? "",
+    targetUsers: agent.target_users ?? [],
+    primaryTasks: agent.primary_tasks ?? [],
+    domainContext: agent.instructions?.domain_context ?? "",
+    conversationBehavior: customBehavior ? [...knownBehaviors, CUSTOM] : knownBehaviors,
+    behaviorCustom: customBehavior ?? "",
+    language: knownLanguage,
+    languageOther: knownLanguage === OTHER ? agent.language : "",
+    voice: agent.voice ?? "",
+    additionalInstructions: agent.instructions?.additional_instructions ?? "",
+  });
+}
+
 // Storage can be missing, full or blocked (private windows): never let that
 // break the console. A stored config that no longer validates is ignored.
 export function loadConfig(storage = globalThis.localStorage) {

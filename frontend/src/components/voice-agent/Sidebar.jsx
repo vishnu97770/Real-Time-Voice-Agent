@@ -7,7 +7,9 @@ import { voiceSupport } from "../../runtime/useVoice.js";
 const NAVIGATION = [
   ["home", "Home", "home"],
   ["applications", "Applications", "applications"],
+  ["workflow", "Workflows", "workflows"],
   ["phone", "Call History", "history"],
+  ["user", "Contacts", "contacts"],
   ["analytics", "Analytics", "analytics"],
 ];
 

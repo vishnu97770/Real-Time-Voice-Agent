@@ -42,3 +42,16 @@ def spoken(events: list[dict]) -> str:
 
 def done(events: list[dict]) -> dict:
     return events[-1]
+
+
+def migrate(url: str, revision: str = "head") -> None:
+    """Build a file database's schema the way production does: with Alembic."""
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config
+
+    config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
+    config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
+    config.attributes["configure_logger"] = False  # leave pytest's log capture alone
+    command.upgrade(config, revision)

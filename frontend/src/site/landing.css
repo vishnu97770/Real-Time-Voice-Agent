@@ -1,0 +1,581 @@
+/* =========================================================================
+   PUBLIC SITE. Everything is scoped under .lp, so none of it reaches the application.
+   Dark on purpose, independent of the app's light/dark switch: this is the cinematic half of the
+   product; the application is the calm half.
+   ========================================================================= */
+
+.lp {
+  --lp-bg: #05090a;
+  --lp-bg-2: #081010;
+  --lp-surface: #0b1313;
+  --lp-surface-2: #101b1b;
+  --lp-line: rgba(255, 255, 255, 0.08);
+  --lp-line-2: rgba(255, 255, 255, 0.15);
+  --lp-text: #eef5f3;
+  --lp-muted: #9cada8;
+  --lp-dim: #62726d;
+  --lp-accent: var(--brand);
+  --lp-accent-hi: var(--brand-hi);
+  --lp-pad: clamp(20px, 5vw, 76px);
+  --lp-warn: #e2b866;
+
+  position: relative;
+  min-height: 100vh;
+  background: var(--lp-bg);
+  color: var(--lp-text);
+  font-family: var(--font-sans);
+  color-scheme: dark;
+  overflow-x: clip;
+}
+
+.lp ::selection {
+  background: rgba(var(--brand-rgb), 0.4);
+}
+
+.lp a {
+  color: inherit;
+}
+
+.lp :focus-visible {
+  outline: 2px solid var(--lp-accent-hi);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* film grain: kills gradient banding and gives the black some texture. Static, so it is
+   rasterised once and composited for free. */
+.lp::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+.lp main,
+.lp footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------ type */
+
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lp-muted);
+}
+
+.lp-eyebrow b {
+  color: var(--lp-accent-hi);
+  font-weight: 500;
+}
+
+.lp .live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lp-accent);
+  box-shadow: 0 0 0 0 rgba(var(--brand-rgb), 0.6);
+  animation: live-dot 2.2s ease-out infinite;
+}
+
+@keyframes live-dot {
+  70%, 100% { box-shadow: 0 0 0 9px rgba(var(--brand-rgb), 0); }
+}
+
+.lp-h2 {
+  margin: 0;
+  font-size: clamp(2.3rem, 5.6vw, 5.4rem);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+  font-weight: 540;
+  text-wrap: balance;
+}
+
+.lp-h2 em,
+.hero-title em {
+  font-style: normal;
+  color: var(--lp-accent-hi);
+}
+
+.lp-lead {
+  margin: 0;
+  max-width: 46ch;
+  font-size: clamp(1.02rem, 1.35vw, 1.28rem);
+  line-height: 1.55;
+  color: var(--lp-muted);
+  text-wrap: pretty;
+}
+
+.lp-wrap {
+  width: 100%;
+  max-width: 1480px;
+  margin-inline: auto;
+  padding-inline: var(--lp-pad);
+}
+
+/* ------------------------------------------------------------------ buttons */
+
+.lp-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 999px;
+  font: 500 15px/1 var(--font-sans);
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.4s var(--ease-out), background-color 0.25s, border-color 0.25s, box-shadow 0.4s;
+}
+
+.lp-btn--sm {
+  height: 42px;
+  padding: 0 18px;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.lp-btn .arrow {
+  transition: transform 0.4s var(--ease-out);
+}
+
+.lp-btn:hover .arrow {
+  transform: translateX(5px);
+}
+
+.lp-btn--primary {
+  background: var(--lp-accent);
+  color: #03110d;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset, 0 12px 44px -12px rgba(var(--brand-rgb), 0.75);
+}
+
+.lp-btn--primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.38) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.9s var(--ease-out);
+}
+
+.lp-btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset, 0 18px 56px -12px rgba(var(--brand-rgb), 0.95);
+}
+
+.lp-btn--primary:hover::before {
+  transform: translateX(120%);
+}
+
+.lp-btn--ghost {
+  border: 1px solid var(--lp-line-2);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--lp-text);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.lp-btn--ghost:hover {
+  border-color: rgba(var(--brand-rgb), 0.7);
+  background: rgba(var(--brand-rgb), 0.08);
+  transform: translateY(-2px);
+}
+
+/* ------------------------------------------------------------------ reveal */
+
+.rv {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition: opacity 0.9s var(--ease-out) var(--d, 0s), transform 0.9s var(--ease-out) var(--d, 0s);
+}
+
+.rv.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ------------------------------------------------------------------ waveform (shared) */
+
+/* --boost can be animated (a card's waveform swells on hover) because it is a registered number */
+@property --boost {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+.wave {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  transition: --boost 0.6s var(--ease-out);
+}
+
+.wave i {
+  flex: 1;
+  max-width: 5px;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--lp-accent);
+  opacity: 0.85;
+  transform-origin: center;
+  transform: scaleY(calc(0.08 + var(--lvl, 0.1) * 0.2));
+  animation: wave-bar var(--dur, 1s) ease-in-out var(--delay, 0s) infinite;
+}
+
+.wave--user i {
+  background: var(--lp-text);
+  opacity: 0.6;
+}
+
+@keyframes wave-bar {
+  0%, 100% { transform: scaleY(calc(0.06 + var(--lvl, 0.1) * 0.12)); }
+  50% { transform: scaleY(min(1, calc(0.1 + var(--lvl, 0.1) * var(--amp, 0.6) * var(--boost, 1)))); }
+}
+
+/* ------------------------------------------------------------------ stage (the 3D orb) */
+
+.stage-host {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.stage-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* :where() keeps this at zero specificity, so a section's own positioning always wins */
+:where(.orb-anchor) {
+  position: relative;
+}
+
+.orb-anchor {
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
+/* the CSS orb: the whole orb until WebGL is up, and on devices that never get WebGL */
+.static-orb {
+  position: absolute;
+  inset: 0;
+  transition: opacity 1s ease;
+}
+
+.lp[data-stage="ready"] .static-orb {
+  opacity: 0;
+}
+
+.static-orb-halo {
+  position: absolute;
+  inset: -22%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(var(--brand-rgb), 0.22), rgba(var(--brand-rgb), 0.06) 55%, transparent 72%);
+  animation: orb-breathe 6s ease-in-out infinite;
+}
+
+.static-orb-core {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(198, 255, 240, 0.32), transparent 22%),
+    radial-gradient(circle at 38% 34%, #17564c 0%, #0a2f2b 36%, #03100f 70%, #020808 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(134, 214, 194, 0.28),
+    inset -14px -20px 60px rgba(var(--brand-rgb), 0.38),
+    0 0 90px rgba(var(--brand-rgb), 0.2);
+  animation: orb-breathe 6s ease-in-out infinite;
+}
+
+.static-orb-ring {
+  position: absolute;
+  inset: -6%;
+  border-radius: 50%;
+  border: 1px solid rgba(134, 214, 194, 0.4);
+}
+
+.static-orb-ring--a { transform: rotateX(72deg) rotateZ(0deg); animation: orb-ring-a 16s linear infinite; }
+.static-orb-ring--b { inset: -14%; border-color: rgba(134, 214, 194, 0.22); transform: rotateX(58deg) rotateY(24deg); animation: orb-ring-b 22s linear infinite; }
+
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+
+@keyframes orb-ring-a { to { transform: rotateX(72deg) rotateZ(360deg); } }
+@keyframes orb-ring-b { to { transform: rotateX(58deg) rotateY(24deg) rotateZ(-360deg); } }
+
+/* ------------------------------------------------------------------ nav */
+
+.lp-nav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 50;
+}
+
+.lp-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  height: 72px;
+  padding-inline: var(--lp-pad);
+  transition: background-color 0.4s, border-color 0.4s, height 0.4s var(--ease-out);
+  border-bottom: 1px solid transparent;
+}
+
+.lp-nav.is-scrolled .lp-nav-bar,
+.lp-nav.is-open .lp-nav-bar {
+  height: 62px;
+  background: rgba(5, 9, 10, 0.72);
+  border-bottom-color: var(--lp-line);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+}
+
+.lp-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--lp-text);
+}
+
+.lp-brand b {
+  font-weight: 600;
+}
+
+.lp-nav-links {
+  display: flex;
+  gap: 4px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.lp-nav-links a {
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--lp-muted);
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.lp-nav-links a:hover {
+  color: var(--lp-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.lp-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-nav-signin {
+  padding: 10px 16px;
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--lp-muted);
+  border-radius: 999px;
+  transition: color 0.2s;
+}
+
+.lp-nav-signin:hover {
+  color: var(--lp-text);
+}
+
+.lp-nav-toggle,
+.lp-nav-sheet {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .lp-nav-links,
+  .lp-nav-actions {
+    display: none;
+  }
+
+  .lp-nav-toggle {
+    display: grid;
+    place-content: center;
+    gap: 6px;
+    width: 44px;
+    height: 44px;
+    margin-right: -10px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .lp-nav-toggle span {
+    display: block;
+    width: 22px;
+    height: 1.5px;
+    background: var(--lp-text);
+    transition: transform 0.35s var(--ease-out);
+  }
+
+  .lp-nav.is-open .lp-nav-toggle span:first-child { transform: translateY(3.75px) rotate(45deg); }
+  .lp-nav.is-open .lp-nav-toggle span:last-child { transform: translateY(-3.75px) rotate(-45deg); }
+
+  .lp-nav-sheet {
+    display: grid;
+    gap: 6px;
+    padding: 8px var(--lp-pad) 24px;
+    background: rgba(5, 9, 10, 0.94);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    max-height: 0;
+    overflow: hidden;
+    padding-block: 0;
+    transition: max-height 0.5s var(--ease-out), padding 0.5s var(--ease-out);
+  }
+
+  .lp-nav.is-open .lp-nav-sheet {
+    max-height: 420px;
+    padding-block: 8px 24px;
+  }
+
+  .lp-nav-sheet a:not(.lp-btn) {
+    padding: 14px 4px;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+    text-decoration: none;
+    border-bottom: 1px solid var(--lp-line);
+  }
+
+  .lp-nav-sheet .lp-btn {
+    margin-top: 12px;
+  }
+}
+
+/* ------------------------------------------------------------------ chapter marker */
+
+.lp-chapter {
+  position: fixed;
+  left: 22px;
+  top: 50%;
+  z-index: 0; /* behind the page content, so cards sliding past cover it instead of colliding */
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lp-dim);
+  pointer-events: none;
+  writing-mode: vertical-rl;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.lp-chapter b {
+  color: var(--lp-accent-hi);
+  font-weight: 500;
+}
+
+.lp-chapter-bar {
+  width: 1px;
+  height: 84px;
+  background: var(--lp-line-2);
+  position: relative;
+  overflow: hidden;
+}
+
+.lp-chapter-bar i {
+  position: absolute;
+  inset: 0;
+  background: var(--lp-accent-hi);
+  transform-origin: top;
+  transform: scaleY(var(--page, 0));
+}
+
+/* the gutter only exists on wide screens; elsewhere the marker would sit on the content */
+@media (max-width: 1180px) {
+  .lp-chapter {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ footer */
+
+.lp-footer {
+  border-top: 1px solid var(--lp-line);
+  padding: 34px 0 44px;
+  background: var(--lp-bg);
+}
+
+.lp-footer .lp-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px 32px;
+  font-size: 13px;
+  color: var(--lp-dim);
+}
+
+.lp-footer nav {
+  display: flex;
+  gap: 22px;
+}
+
+.lp-footer a {
+  text-decoration: none;
+  color: var(--lp-muted);
+}
+
+.lp-footer a:hover {
+  color: var(--lp-text);
+}
+
+/* ------------------------------------------------------------------ motion preferences */
+
+@media (prefers-reduced-motion: reduce) {
+  .rv {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .lp .live-dot,
+  .static-orb-halo,
+  .static-orb-core,
+  .static-orb-ring {
+    animation: none;
+  }
+
+  .lp-btn,
+  .lp-btn .arrow,
+  .lp-btn--primary::before {
+    transition: none;
+  }
+
+  .wave i {
+    animation: none;
+    transform: scaleY(0.3);
+  }
+}

@@ -37,6 +37,13 @@ from app.guardrails import (
 )
 from app.profiles.base import ActionSpec, Profile, ToolSpec
 from app.summary import build_summary
+from app.voice_context import (
+    CONTEXT_TOOL,
+    VoiceSessionContext,
+    domain_objective,
+    domain_persona,
+    session_data,
+)
 
 BRAIN_ERROR_REPLY = "I'm having trouble on my side right now. Could you say that again?"
 EMPTY_REPLY = "I'm sorry, I didn't catch that. Could you say it another way?"
@@ -115,6 +122,8 @@ class Session:
     customer_name: str | None = None
     persist: Callable[[dict[str, Any]], Awaitable[None]] | None = None
     outbound: OutboundState | None = None
+    # Set on an automated call made for an organization's agent and contact (see app/voice_context.py).
+    context: VoiceSessionContext | None = None
     channel: str = "web"  # "web" | "phone"
     # Hangs up the real phone line. Set only on phone calls; called once, by finalize().
     hangup: Callable[[], Awaitable[None]] | None = None
@@ -159,16 +168,22 @@ def create_session(
     data: dict[str, Any] | None = None,
     customer_ref: str | None = None,
     customer_name: str | None = None,
+    context: VoiceSessionContext | None = None,
 ) -> Session:
+    if context is not None and (outbound is None or data is not None or customer_ref is not None):
+        raise ValueError("a domain context belongs to an outbound call and replaces customer data")
+
     session = Session(
         id=make_call_id(),
         profile=profile,
         brain=brain,
         brain_timeout=brain_timeout,
-        data=copy.deepcopy(profile.data if data is None else data),
+        # A domain call keeps its own data, never the profile's demo data.
+        data=copy.deepcopy(session_data(context) if context is not None else profile.data if data is None else data),
         outbound=outbound,
         customer_ref=customer_ref,
         customer_name=customer_name,
+        context=context,
     )
 
     if outbound is None:
@@ -181,15 +196,23 @@ def create_session(
         if config is None:
             raise ValueError(f"Profile {profile.id} does not support outbound calls")
 
-        names = config.tools if config.tools is not None else list(profile.tools)
-        session.allowed_tools = {name: profile.tools[name] for name in names}
-        session.allowed_actions = {name: profile.actions[name] for name in config.actions}
+        if context is not None:
+            # The profile's tools and actions read and change its demo data, which this call does not have.
+            # The one tool is a read of the call's own context; there is nothing to change.
+            session.allowed_tools = {CONTEXT_TOOL.name: CONTEXT_TOOL}
+            session.allowed_actions = {}
+        else:
+            names = config.tools if config.tools is not None else list(profile.tools)
+            session.allowed_tools = {name: profile.tools[name] for name in names}
+            session.allowed_actions = {name: profile.actions[name] for name in config.actions}
+
         session.log(
             "call_started",
             profile=profile.id,
             brain=brain.name,
             direction="outbound",
             job_id=outbound.job_id,
+            **({k: v for k, v in context.ids().items() if k != "job_id"} if context is not None else {}),
         )
 
     return session
@@ -586,6 +609,7 @@ async def _confirm_identity(session: Session, turn: _Turn, raw_text: str) -> Asy
 
 
 async def _ask_brain(session: Session, turn: _Turn, raw_text: str) -> AsyncIterator[Event]:
+    domain = session.context
     context = BrainContext(
         profile=session.profile,
         data=session.data,
@@ -594,18 +618,19 @@ async def _ask_brain(session: Session, turn: _Turn, raw_text: str) -> AsyncItera
         run_tool=lambda name, args: _run_tool(session, name, args),
         tools=session.allowed_tools,
         actions=session.allowed_actions,
-        persona=session.profile.personalise(session.profile.persona, session.customer_name),
+        persona=domain_persona(domain) if domain else session.profile.personalise(session.profile.persona, session.customer_name),
         outbound=(
             OutboundBrief(
                 callee_name=session.outbound.callee_name,
                 reason=session.outbound.reason,
                 organisation=session.outbound.organisation,
-                persona=session.profile.outbound.persona,
-                objective=session.profile.outbound.objective,
+                persona=domain_persona(domain) if domain else session.profile.outbound.persona,
+                objective=domain_objective(domain) if domain else session.profile.outbound.objective,
             )
             if session.outbound
             else None
         ),
+        domain=domain,
     )
     splitter = SentenceSplitter()
     proposal: Propose | None = None

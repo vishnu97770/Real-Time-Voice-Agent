@@ -1,0 +1,75 @@
+.cta {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 120px 0 90px;
+  overflow: hidden;
+}
+
+.cta-orb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(74svh, 86vw);
+  translate: -50% -50%;
+}
+
+.cta-copy {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: clamp(22px, 4vh, 40px);
+  text-align: center;
+}
+
+.cta-title {
+  margin: 0;
+  max-width: 11ch;
+  font-size: clamp(3.2rem, 10.4vw, 10.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  font-weight: 560;
+  text-wrap: balance;
+}
+
+.cta-title em {
+  font-style: normal;
+  color: var(--lp-accent-hi);
+}
+
+.cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+.lp-btn--lg {
+  height: 64px;
+  padding: 0 34px;
+  font-size: 16.5px;
+}
+
+.cta-note {
+  max-width: 46ch;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lp-muted);
+}
+
+.cta-note a {
+  color: var(--lp-text);
+  text-decoration: underline;
+  text-decoration-color: rgba(var(--brand-rgb), 0.7);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .cta-actions .lp-btn {
+    flex: 1 1 100%;
+  }
+}

@@ -127,7 +127,7 @@ function ChipPicker({ label, options, value, onChange, allowCustom = false, cust
   );
 }
 
-export default function AgentConfigPanel({ initial, onSave, onCancel }) {
+export default function AgentConfigPanel({ initial, onSave, onCancel, saving = false, saveError = null, offline = false }) {
   const dialogRef = useRef(null);
   const [form, setForm] = useState(() => normalizeConfig(initial));
   // Errors appear once the operator tries to save, then follow their edits.
@@ -158,6 +158,8 @@ export default function AgentConfigPanel({ initial, onSave, onCancel }) {
       return;
     }
 
+    // The form stays open, and what was typed stays right here, until onSave confirms it
+    // actually reached the server (or that there is no server to reach).
     onSave(normalizeConfig(form));
   };
 
@@ -413,15 +415,23 @@ export default function AgentConfigPanel({ initial, onSave, onCancel }) {
         </div>
 
         <footer className="config-footer">
-          <p className="config-note">
-            Saved in this browser. The voice applies to calls now; the other settings are not sent to the server yet.
-          </p>
+          {saveError ? (
+            <p className="config-error" role="alert">
+              ⚠ {saveError}
+            </p>
+          ) : (
+            <p className="config-note">
+              {offline
+                ? "No server is reachable right now, so this is saved in this browser only."
+                : "Saved to your organization's agent configuration."}
+            </p>
+          )}
           <div className="config-actions">
-            <button type="button" className="config-cancel" onClick={onCancel}>
+            <button type="button" className="config-cancel" onClick={onCancel} disabled={saving}>
               Cancel
             </button>
-            <button type="submit" className="config-save">
-              Save Configuration
+            <button type="submit" className="config-save" disabled={saving}>
+              {saving ? "Saving…" : "Save Configuration"}
             </button>
           </div>
         </footer>

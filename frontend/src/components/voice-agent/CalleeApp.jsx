@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import Icon from "./Icon";
 import AgentResponse from "./AgentResponse";
+import CallVisualizer from "../voice/CallVisualizer";
 import { declineJob, fetchRing } from "../../runtime/transports.js";
 import { formatTime } from "../../runtime/format.js";
+import { VOICE_STATE_LABEL, visualForCallState } from "../../runtime/voiceState.js";
 import { voiceSupport } from "../../runtime/useVoice.js";
 import { useVoiceAgent } from "../../runtime/useVoiceAgent.js";
 
@@ -73,29 +74,27 @@ export default function CalleeApp({ jobId, token }) {
   let body;
 
   if (ring.state === "loading") {
-    body = <p className="callee-note">Checking this call...</p>;
+    body = <div className="state-block is-loading">Checking this call...</div>;
   } else if (ring.state === "declined") {
-    body = <p className="callee-note">You declined the call. You can close this page.</p>;
+    body = <div className="state-block">You declined the call. You can close this page.</div>;
   } else if (agent.callState === "ended") {
     body = (
-      <p className="callee-note">
+      <div className="state-block">
         {agent.callError ?? "The call has ended. Thank you. You can close this page."}
-      </p>
+      </div>
     );
   } else if (inCall) {
     body = (
       <>
         <div className="callee-orb">
-          <div className="microphone-button microphone-active" aria-hidden="true">
-            <div className="mic-ring ring-one" />
-            <div className="mic-ring ring-two" />
-            <div className="mic-circle">
-              <Icon name="microphone" size={48} />
-            </div>
-          </div>
+          <CallVisualizer
+            state={visualForCallState(agent.callState, Boolean(agent.callError))}
+            orbIcon="microphone"
+            statusLabel={stateText[agent.callState] ?? VOICE_STATE_LABEL[agent.callState]}
+            size="lg"
+          />
         </div>
 
-        <div className="voice-state">{stateText[agent.callState]}</div>
         <div className="timer callee-timer">{formatTime(agent.duration)}</div>
 
         <div className="live-caption" aria-live="polite">
@@ -142,16 +141,15 @@ export default function CalleeApp({ jobId, token }) {
     body = (
       <>
         <div className="callee-orb">
-          <div className="microphone-button microphone-active" aria-hidden="true">
-            <div className="mic-ring ring-one" />
-            <div className="mic-ring ring-two" />
-            <div className="mic-circle">
-              <Icon name="phone" size={48} />
-            </div>
-          </div>
+          <CallVisualizer
+            state="connecting"
+            orbIcon="phone"
+            statusLabel="Incoming call"
+            size="lg"
+            showWaveform={false}
+          />
         </div>
 
-        <h2>Incoming call</h2>
         <p className="callee-note">
           <strong>{ring.organisation}</strong> is calling. It is an AI assistant, and this call is
           recorded as a transcript for the business.
@@ -169,9 +167,9 @@ export default function CalleeApp({ jobId, token }) {
     );
   } else {
     body = (
-      <p className="callee-note">
+      <div className="state-block">
         This call is no longer available. It may have been answered, declined or timed out.
-      </p>
+      </div>
     );
   }
 

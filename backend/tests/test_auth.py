@@ -9,7 +9,7 @@ from app.config import Settings
 from app.db import Repository
 from app.main import create_app
 from app.security import RateLimiter, hash_token
-from tests.helpers import ScriptedBrain
+from tests.helpers import ScriptedBrain, migrate
 
 EMAIL = "op@example.com"
 PASSWORD = "correct horse battery"
@@ -54,6 +54,7 @@ def test_passwords_are_hashed_and_weak_ones_refused():
 
 def test_the_cli_creates_users_without_ever_taking_a_password_on_the_command_line(tmp_path, monkeypatch, capsys):
     url = f"sqlite:///{tmp_path / 'cli.db'}"
+    migrate(url)
     monkeypatch.setattr(cli, "get_settings", lambda: Settings(database_url=url))
     monkeypatch.setenv("VOICE_AGENT_NEW_PASSWORD", PASSWORD)
 

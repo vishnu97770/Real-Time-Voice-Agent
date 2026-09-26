@@ -24,7 +24,10 @@ UNSAFE_METHODS = ("POST", "PUT", "PATCH", "DELETE")
 
 
 def public_user(user: dict[str, Any]) -> dict[str, Any]:
-    return {"id": user["id"], "email": user["email"], "role": user["role"]}
+    # None for a user that predates multi-tenancy (or the synthetic anonymous admin used when
+    # AUTH_REQUIRED=false, which has no row at all): the frontend treats that the same as "no
+    # organization yet", not as an error.
+    return {"id": user["id"], "email": user["email"], "role": user["role"], "organization_id": user.get("organization_id")}
 
 
 class Auth:

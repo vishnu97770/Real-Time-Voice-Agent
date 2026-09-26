@@ -1,6 +1,15 @@
 .venv/
 __pycache__/
-.pytest_cache/
-.env
 *.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Secrets and local databases: only .env.example is committed.
+.env
+.env.*
+!.env.example
 *.db

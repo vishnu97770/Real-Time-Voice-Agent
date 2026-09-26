@@ -1,0 +1,8 @@
+# Optional: the Pipecat voice runtime (app/pipecat_runtime), which is off unless VOICE_RUNTIME=pipecat.
+# Install on top of requirements.txt:  pip install -r requirements-pipecat.txt
+# An exact pin, on purpose: Pipecat deprecates and removes APIs between minor versions, and the runtime refuses to
+# start (falling back to the legacy runtime) on any other version.
+pipecat-ai==1.11.0
+# Native Pipecat Deepgram STT (VOICE_PIPECAT_STT=native, still off by default) needs Deepgram's own SDK, which
+# pipecat.services.deepgram.stt imports directly. Pinned to what Pipecat 1.11.0's "deepgram" extra resolves to.
+deepgram-sdk==7.10.0

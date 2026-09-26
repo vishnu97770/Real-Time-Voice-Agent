@@ -3,7 +3,6 @@ import json
 
 import httpx
 import pytest
-from sqlalchemy import create_engine, text
 
 from app import cli
 from app.brains.base import Propose, TextDelta, ToolCall
@@ -11,7 +10,7 @@ from app.config import Settings
 from app.db import Repository
 from app.main import create_app
 from app.profiles import PROFILES
-from tests.helpers import ScriptedBrain
+from tests.helpers import ScriptedBrain, migrate
 from tests.test_api import parse_sse
 
 KEY = {"X-API-Key": "test-key"}
@@ -231,36 +230,12 @@ async def test_an_applicant_call_reads_the_applicants_own_current_application():
     assert seen["result"]["id"] == "APP-1031" and seen["result"]["applicant"] == "Sneha Kulkarni"
 
 
-# --- start-up migration & CLI -----------------------------------------------------------------
-
-
-def test_a_database_from_an_older_version_gets_the_new_columns_and_keeps_its_rows(tmp_path):
-    url = f"sqlite:///{tmp_path / 'old.db'}"
-    engine = create_engine(url)
-
-    with engine.begin() as conn:  # the job table as it was before customer_ref existed
-        conn.execute(text(
-            "create table call_jobs (id varchar(40) primary key, reference varchar(64), profile_id varchar(40), "
-            "callee_name varchar(80), callee_phone varchar(24), reason varchar(200), callback_url text, "
-            "status varchar(20), answer_token varchar(64), created_at float, expires_at float, "
-            "max_duration_seconds integer, answered_at float, finished_at float, call_id varchar(64), "
-            "end_reason varchar(24), callback_status varchar(12), callback_attempts integer)"
-        ))
-        conn.execute(text(
-            "insert into call_jobs (id, profile_id, callee_name, callee_phone, reason, status, answer_token, "
-            "created_at, expires_at, max_duration_seconds, callback_status, callback_attempts) "
-            "values ('JOB-OLD', 'bank', 'P', '+911234567890', 'r', 'completed', 't', 1, 2, 300, 'none', 0)"
-        ))
-
-    repo = Repository(url)  # opens the old file
-    job = repo.get_job("JOB-OLD")
-
-    assert job["status"] == "completed" and job["customer_ref"] is None
-    repo.upsert_customer("bank", "a", "A", anita())  # new tables work too
+# --- CLI ----------------------------------------------------------------------------------------
 
 
 def test_seed_demo_and_import_customers(tmp_path, monkeypatch, capsys):
     url = f"sqlite:///{tmp_path / 'cli.db'}"
+    migrate(url)
     monkeypatch.setattr(cli, "get_settings", lambda: Settings(database_url=url))
 
     assert cli.main(["seed-demo"]) == 0

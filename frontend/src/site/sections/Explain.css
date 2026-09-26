@@ -1,0 +1,233 @@
+/* A tall section holding a sticky screen. Scrolling through it drives --p (0..1). */
+.explain {
+  position: relative;
+  height: 430vh;
+}
+
+.explain-pin {
+  position: sticky;
+  top: 0;
+  display: grid;
+  align-content: center;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.explain-inner {
+  display: grid;
+  gap: clamp(28px, 5vh, 56px);
+  --stmt: clamp(0, calc((var(--p) - 0.36) * 8), 1);
+}
+
+.explain-statement {
+  margin: 0;
+  max-width: 21ch;
+  font-size: clamp(2.2rem, 5.6vw, 5.6rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-weight: 540;
+  transform-origin: 0 0;
+  transform: translate3d(0, calc(var(--stmt) * -4vh), 0) scale(calc(1 - var(--stmt) * 0.32));
+  will-change: transform;
+}
+
+.explain-word {
+  opacity: clamp(0.13, calc(0.13 + (var(--p) * 2.7 - var(--w)) * 10), 1);
+}
+
+.flow-wrap {
+  position: relative;
+  padding-top: 34px;
+}
+
+.flow-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 55px;
+  height: 1px;
+  background: var(--lp-line-2);
+}
+
+.flow-line i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--lp-accent), var(--lp-accent-hi));
+  box-shadow: 0 0 16px rgba(var(--brand-rgb), 0.9);
+  transform-origin: left;
+  transform: scaleX(clamp(0, calc((var(--p) - 0.5) / 0.44), 1));
+}
+
+.flow {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow li {
+  --on: clamp(0, calc((var(--p) - var(--s)) * 16), 1);
+
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  opacity: calc(0.22 + var(--on) * 0.78);
+  transform: translate3d(0, calc((1 - var(--on)) * 22px), 0);
+}
+
+.flow-index {
+  position: absolute;
+  top: -34px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--lp-dim);
+}
+
+.flow-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--lp-line-2);
+  background: var(--lp-bg);
+  color: var(--lp-muted);
+  transition: color 0.4s, border-color 0.4s, box-shadow 0.4s, background-color 0.4s;
+  margin-top: -22px;
+  position: relative;
+}
+
+.flow li.is-current .flow-icon {
+  color: #03110d;
+  background: var(--lp-accent);
+  border-color: var(--lp-accent);
+  box-shadow: 0 0 0 8px rgba(var(--brand-rgb), 0.16), 0 0 32px rgba(var(--brand-rgb), 0.7);
+}
+
+.flow li b {
+  margin-top: 10px;
+  font: 500 12px/1.3 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lp-text);
+}
+
+.flow-note {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--lp-muted);
+  max-width: 19ch;
+}
+
+/* Below ~1000px seven columns are too tight: stack the story vertically, no pinning, everything lit. */
+@media (max-width: 999px) {
+  .explain {
+    height: auto;
+    --p: 1 !important;
+  }
+
+  .explain-pin {
+    position: static;
+    height: auto;
+    padding: 110px 0 90px;
+    overflow: visible;
+  }
+
+  .explain-statement {
+    transform: none;
+    max-width: 16ch;
+    font-size: clamp(2.1rem, 9vw, 3.6rem);
+  }
+
+  .flow-wrap {
+    padding: 0 0 0 26px;
+  }
+
+  .flow-line {
+    left: 21px;
+    right: auto;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    height: auto;
+  }
+
+  .flow-line i {
+    transform: none;
+    background: linear-gradient(var(--lp-accent), rgba(var(--brand-rgb), 0.15));
+  }
+
+  .flow {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+
+  .flow li {
+    grid-template-columns: 44px 1fr;
+    grid-template-areas: "icon title" "icon note";
+    column-gap: 18px;
+    row-gap: 4px;
+    opacity: 1;
+    transform: none;
+    margin-left: -26px;
+  }
+
+  .flow-index {
+    display: none;
+  }
+
+  .flow-icon {
+    grid-area: icon;
+    margin-top: 0;
+  }
+
+  .flow li b {
+    grid-area: title;
+    margin-top: 6px;
+  }
+
+  .flow-note {
+    grid-area: note;
+    max-width: none;
+  }
+
+  .explain-word {
+    opacity: 1;
+  }
+
+  /* where the browser can scrub animation by scroll, the list still builds in as you read it */
+  @supports (animation-timeline: view()) {
+    .flow li {
+      animation: flow-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+
+    @keyframes flow-in {
+      from { opacity: 0.15; transform: translate3d(0, 22px, 0); }
+      to { opacity: 1; transform: none; }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .explain {
+    height: auto;
+    --p: 1 !important;
+  }
+
+  .explain-pin {
+    position: static;
+    height: auto;
+    padding: 110px 0 90px;
+  }
+
+  .explain-statement { transform: none; }
+  .flow li { opacity: 1; transform: none; animation: none; }
+  .explain-word { opacity: 1; }
+  .flow-line i { transform: scaleX(1); }
+}

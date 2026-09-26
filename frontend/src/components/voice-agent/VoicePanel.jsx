@@ -1,5 +1,8 @@
 import { useState } from "react";
 import Icon from "./Icon";
+import CallVisualizer from "../voice/CallVisualizer";
+import AiActivity from "../voice/AiActivity";
+import { visualForCallState } from "../../runtime/voiceState.js";
 import { voiceSupport } from "../../runtime/useVoice.js";
 import { CALL_STATE_TEXT, formatTime } from "../../runtime/format.js";
 
@@ -17,6 +20,7 @@ export default function VoicePanel({
   onSend,
   onReset,
   onViewHistory,
+  acting = false,
 }) {
   const [draft, setDraft] = useState("");
 
@@ -33,27 +37,30 @@ export default function VoicePanel({
   };
 
   return (
-    <section className={`voice-panel state-${callState}`} aria-label="Call controls">
+    <section className={`voice-panel voice-dock state-${callState}`} aria-label="Call controls">
       <div className="dock-main">
-        <button
-          type="button"
-          className={`microphone-button mic-compact ${isActive ? "microphone-active" : ""}`}
-          onClick={isActive ? onStop : callState === "ended" ? onReset : onStart}
-          aria-label={
-            isActive ? "Stop conversation" : callState === "ended" ? "Start new conversation" : "Start conversation"
-          }
-        >
-          <div className="mic-ring ring-one" />
-          <div className="mic-ring ring-two" />
+        <div className={`dock-stage is-${callState}`}>
+          <button
+            type="button"
+            className="voice-orb-button"
+            onClick={isActive ? onStop : callState === "ended" ? onReset : onStart}
+            aria-label={
+              isActive ? "Stop conversation" : callState === "ended" ? "Start new conversation" : "Start conversation"
+            }
+          >
+            <CallVisualizer
+              state={visualForCallState(callState)}
+              orbIcon="microphone"
+              orbLabel={CALL_STATE_TEXT[callState]}
+              statusLabel={CALL_STATE_TEXT[callState]}
+              size="xl"
+            />
+          </button>
+        </div>
 
-          <div className="mic-circle">
-            <Icon name="microphone" size={28} />
-          </div>
-        </button>
+        {isActive && <AiActivity state={visualForCallState(callState)} acting={acting} />}
 
-        <div className="dock-status">
-          <div className="voice-state">{CALL_STATE_TEXT[callState]}</div>
-
+        <div className="dock-meta">
           {isActive ? (
             <>
               <div className="timer">{formatTime(duration)}</div>

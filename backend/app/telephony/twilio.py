@@ -8,27 +8,31 @@ audio. No Twilio SDK is needed; it is a handful of REST calls and one signature.
 import base64
 import hashlib
 import hmac
-import re
 import time
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import parse_qsl, quote
 from xml.sax.saxutils import quoteattr
 
 import httpx
+
+from app.phone import to_e164  # noqa: F401  (it lived here; kept importable from here)
+from app.telephony.base import (
+    CallEvent,
+    CallEventKind,
+    InvalidWebhook,
+    PlaceCall,
+    ProviderCall,
+    TelephonyError,
+    WebhookRequest,
+)
 
 API = "https://api.twilio.com/2010-04-01"
 # Twilio will not ring longer than this, whatever we ask for.
 MAX_RING_SECONDS = 600
 
 
-class TwilioError(Exception):
+class TwilioError(TelephonyError):
     pass
-
-
-def to_e164(phone: str) -> str | None:
-    """"+91 98765-43210" -> "+919876543210". None if it is not international format."""
-    cleaned = re.sub(r"[\s().-]", "", phone)
-    return cleaned if re.fullmatch(r"\+[1-9]\d{6,14}", cleaned) else None
 
 
 # --- trusting Twilio ---------------------------------------------------------------
@@ -134,3 +138,82 @@ class TwilioClient:
 
     async def hang_up(self, call_sid: str) -> None:
         await self._post(f"Calls/{quote(call_sid)}.json", [("Status", "completed")])
+
+
+# --- the adapter: Twilio behind the application's provider-neutral interface ------------------------------------
+
+
+def ws_url(public_api_url: str) -> str:
+    return public_api_url.replace("https://", "wss://", 1).replace("http://", "ws://", 1) + "/api/telephony/stream"
+
+
+def status_url(public_api_url: str, job_id: str) -> str:
+    return f"{public_api_url}/api/telephony/status?job={quote(job_id)}"
+
+
+def voice_url(public_api_url: str) -> str:
+    return f"{public_api_url}/api/telephony/voice"
+
+
+# Twilio's CallStatus, in the application's words: (what happened, the word kept as the job's end_reason).
+# Statuses not listed (initiated, queued, anything new) carry nothing the application uses.
+_STATUSES: dict[str, tuple[CallEventKind, str | None]] = {
+    "ringing": (CallEventKind.RINGING, None),
+    "in-progress": (CallEventKind.ANSWERED, None),
+    "busy": (CallEventKind.BUSY, "busy"),
+    "no-answer": (CallEventKind.NO_ANSWER, "no_answer"),
+    "canceled": (CallEventKind.NO_ANSWER, "canceled"),
+    "failed": (CallEventKind.FAILED, "telephony_error"),
+    "completed": (CallEventKind.COMPLETED, None),
+}
+
+
+class TwilioTelephony:
+    """`TelephonyAdapter` for Twilio: it owns placing the call (TwiML, the signed stream token, the REST call),
+    ending it, and authenticating and reading Twilio's status callbacks. It adds no behavior of its own."""
+
+    name = "twilio"
+
+    def __init__(self, client: "TwilioClient", auth_token: str, public_api_url: str) -> None:
+        self.client = client
+        self.auth_token = auth_token  # signs the stream tokens and validates Twilio's webhooks
+        self.public_api_url = public_api_url
+
+    async def place_call(self, request: PlaceCall) -> ProviderCall:
+        """Ring the destination; when it answers, Twilio connects the call's audio to our WebSocket, carrying a
+        token only this job's call can present."""
+        twiml = stream_twiml(
+            ws_url(self.public_api_url),
+            {
+                "kind": "job",
+                "job_id": request.job_id,
+                "token": sign_stream_token(self.auth_token, "job", request.job_id, request.ring_seconds + 60),
+            },
+        )
+        sid = await self.client.create_call(
+            request.to, twiml, status_url(self.public_api_url, request.job_id), request.ring_seconds
+        )
+
+        return ProviderCall(self.name, sid)
+
+    async def hang_up(self, call: ProviderCall) -> None:
+        await self.client.hang_up(call.provider_call_id)
+
+    def parse_event(self, request: WebhookRequest) -> CallEvent | None:
+        job_id = request.query.get("job", "")
+        params = parse_qsl(request.body.decode(), keep_blank_values=True)
+
+        # Anyone can POST to our public URL: only a request Twilio signed for exactly this URL is believed.
+        if not validate_signature(
+            self.auth_token, status_url(self.public_api_url, job_id), params, request.headers.get("x-twilio-signature")
+        ):
+            raise InvalidWebhook("Bad signature")
+
+        fields = dict(params)
+        mapped = _STATUSES.get(fields.get("CallStatus", ""))
+
+        if mapped is None:
+            return None
+
+        kind, reason = mapped
+        return CallEvent(kind, job_id, self.name, fields.get("CallSid"), reason)

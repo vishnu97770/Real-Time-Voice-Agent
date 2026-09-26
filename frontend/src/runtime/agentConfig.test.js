@@ -8,12 +8,14 @@ import {
   OTHER,
   ROLE_SUGGESTIONS,
   emptyConfig,
+  fromAgentPayload,
   isConfigured,
   loadConfig,
   normalizeConfig,
   resolveConfig,
   sameConfig,
   saveConfig,
+  toAgentPayload,
   validateConfig,
 } from "./agentConfig.js";
 
@@ -183,4 +185,92 @@ test("role suggestions only exist for known industries, so any domain still work
   }
 
   assert.equal(ROLE_SUGGESTIONS[OTHER], undefined);
+});
+
+// --- the backend Agent payload (Step 18B) ---------------------------------------------------
+
+test("an unconfigured agent has no payload to send", () => {
+  assert.equal(toAgentPayload(emptyConfig()), null);
+});
+
+test("a valid configuration becomes the shape the Agent API reads", () => {
+  assert.deepEqual(toAgentPayload(mining()), {
+    name: "MineAssist",
+    role: "Mining Operations Support Agent",
+    industry: "Mining",
+    purpose: "Help mine operators understand production data.",
+    target_users: ["Operators", "Managers"],
+    primary_tasks: ["Explain reports"],
+    behavior_config: { tone: ["Professional", "Concise"] },
+    instructions: { domain_context: "", additional_instructions: "" },
+    language: "English + Hindi",
+    voice: null,
+  });
+});
+
+test("Other industry, Other language and a Custom behavior are resolved before sending, same as resolveConfig", () => {
+  const payload = toAgentPayload({
+    ...mining(),
+    industry: OTHER,
+    industryOther: "Aviation",
+    language: OTHER,
+    languageOther: "Tamil",
+    conversationBehavior: ["Concise", CUSTOM],
+    behaviorCustom: "Calm under pressure",
+  });
+
+  assert.equal(payload.industry, "Aviation");
+  assert.equal(payload.language, "Tamil");
+  assert.deepEqual(payload.behavior_config.tone, ["Concise", "Calm under pressure"]);
+});
+
+test("an agent loaded from the backend fills the form the same way the form would have produced it", () => {
+  assert.deepEqual(fromAgentPayload(toAgentPayload(mining())), normalizeConfig(mining()));
+});
+
+test("loading a backend agent never drops a value that is no longer a fixed choice: it becomes Other/Custom", () => {
+  const agent = {
+    name: "MineAssist",
+    role: "Mining Operations Support Agent",
+    industry: "Piracy on the high seas", // not one of the fixed INDUSTRIES
+    purpose: "Help mine operators understand production data.",
+    target_users: ["Operators"],
+    primary_tasks: [],
+    behavior_config: { tone: ["Concise", "Menacing"] }, // "Menacing" is not one of the fixed BEHAVIORS
+    instructions: { domain_context: "", additional_instructions: "" },
+    language: "Klingon", // not one of the fixed LANGUAGES
+    voice: null,
+  };
+
+  const form = fromAgentPayload(agent);
+
+  assert.equal(form.industry, OTHER);
+  assert.equal(form.industryOther, "Piracy on the high seas");
+  assert.deepEqual(form.conversationBehavior, ["Concise", CUSTOM]);
+  assert.equal(form.behaviorCustom, "Menacing");
+  assert.equal(form.language, OTHER);
+  assert.equal(form.languageOther, "Klingon");
+
+  // And validates as a complete, savable configuration again.
+  assert.deepEqual(validateConfig(form), {});
+});
+
+test("a backend agent with nothing in its instructions or behavior still loads as a valid, empty-optional form", () => {
+  const form = fromAgentPayload({
+    name: "Bare",
+    role: "Role",
+    industry: "Mining",
+    purpose: "Purpose.",
+    target_users: [],
+    primary_tasks: [],
+    behavior_config: {},
+    instructions: {},
+    language: "English",
+    voice: null,
+  });
+
+  assert.deepEqual(validateConfig(form), {});
+  assert.equal(form.domainContext, "");
+  assert.equal(form.additionalInstructions, "");
+  assert.deepEqual(form.conversationBehavior, []);
 });

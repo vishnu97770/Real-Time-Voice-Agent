@@ -13,6 +13,7 @@ from google.genai import types
 
 from app.brains.base import BrainContext, BrainEvent, OutboundBrief, Propose, TextDelta, ToolCall, Turn
 from app.profiles.base import ActionSpec, ToolSpec
+from app.voice_context import VoiceSessionContext, render_domain_brief
 
 MAX_TOOL_ROUNDS = 4
 
@@ -53,7 +54,10 @@ Your goal: {objective}
 """
 
 
-def build_instructions(persona: str, outbound: OutboundBrief | None) -> str:
+def build_instructions(persona: str, outbound: OutboundBrief | None, domain: VoiceSessionContext | None = None) -> str:
+    """The system prompt. For an automated domain call the agent's configuration and the call's reason come
+    LAST, after the fixed rules on speaking, facts, actions and safety, so nothing configured can outrank them.
+    What is known about the contact is never in it: that is the get_call_context tool's data."""
     brief = ""
 
     if outbound:
@@ -62,7 +66,12 @@ def build_instructions(persona: str, outbound: OutboundBrief | None) -> str:
             callee_name=outbound.callee_name, reason=outbound.reason, objective=outbound.objective
         )
 
-    return INSTRUCTIONS.format(persona=persona, outbound=brief)
+    text = INSTRUCTIONS.format(persona=persona, outbound=brief)
+
+    if domain is not None:
+        text += "\n" + render_domain_brief(domain) + "\n"
+
+    return text
 
 
 def _declaration(name: str, description: str, parameters: dict) -> types.FunctionDeclaration:
@@ -120,7 +129,7 @@ class GeminiBrain:
         declarations = function_declarations(context.tools, context.actions)
 
         return types.GenerateContentConfig(
-            system_instruction=build_instructions(context.persona, context.outbound),
+            system_instruction=build_instructions(context.persona, context.outbound, context.domain),
             # Only what this call may use is ever offered to the model.
             tools=[types.Tool(function_declarations=declarations)] if declarations else None,
             # We run the tool loop ourselves so the consent gate can sit in it.

@@ -1,0 +1,16 @@
+/* Brand tokens shared by the public site and the application.
+   The accent is #52AB98. It is used for state and emphasis (active, live, done, the primary
+   action), never as a general fill: surfaces stay neutral. */
+
+:root {
+  --brand: #52ab98;
+  --brand-hi: #86d6c2; /* the accent on dark surfaces: text, rims, waveforms */
+  --brand-lo: #2b6d5e; /* the accent as text on light surfaces */
+  --brand-rgb: 82, 171, 152;
+
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}

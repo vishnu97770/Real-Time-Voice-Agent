@@ -1,0 +1,201 @@
+/* Base for every screen, and the two things that live outside any one screen: the splash shown
+   while a chunk loads and the curtain the router draws between the site and the product. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ------------------------------------------------------------------ splash */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #06090a;
+  color: #eaf2ef;
+}
+
+.splash-mark,
+.route-curtain-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+}
+
+.splash-mark i,
+.route-curtain-mark i {
+  display: block;
+  width: 3px;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--brand);
+  transform-origin: center;
+  animation: splash-bar 1.1s var(--ease-in-out) infinite;
+}
+
+.splash-mark i:nth-child(2),
+.route-curtain-mark i:nth-child(2) { animation-delay: 0.12s; }
+.splash-mark i:nth-child(3),
+.route-curtain-mark i:nth-child(3) { animation-delay: 0.24s; }
+.splash-mark i:nth-child(4),
+.route-curtain-mark i:nth-child(4) { animation-delay: 0.36s; }
+.splash-mark i:nth-child(5),
+.route-curtain-mark i:nth-child(5) { animation-delay: 0.48s; }
+
+@keyframes splash-bar {
+  0%, 100% { transform: scaleY(0.25); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* ------------------------------------------------------------------ route curtain */
+
+.route-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: #06090a;
+  pointer-events: all;
+  will-change: clip-path;
+}
+
+.route-curtain.is-closing { animation: curtain-close 420ms var(--ease-in-out) both; }
+.route-curtain.is-opening { animation: curtain-open 520ms var(--ease-in-out) both; }
+
+.route-curtain-mark { animation: curtain-mark 420ms var(--ease-out) both; }
+
+@keyframes curtain-close {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes curtain-open {
+  from { clip-path: inset(0 0 0 0); }
+  to { clip-path: inset(0 0 100% 0); }
+}
+
+@keyframes curtain-mark {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-mark i,
+  .route-curtain-mark i {
+    animation: none;
+  }
+
+  .route-curtain.is-closing,
+  .route-curtain.is-opening {
+    animation-duration: 1ms;
+  }
+}
+
+/* ------------------------------------------------------------------ gate screens
+   The plain full-page states around sign-in: the server cannot be reached, or there is no such page. */
+
+.gate {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #06090a;
+  color: #eaf2ef;
+}
+
+.gate-card {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  width: min(100%, 460px);
+  padding: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  background: #0b1313;
+}
+
+.gate-card h1 {
+  margin: 8px 0 0;
+  font-size: 1.7rem;
+  letter-spacing: -0.035em;
+  font-weight: 560;
+}
+
+.gate-card p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #9cada8;
+}
+
+.gate-card small {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #62726d;
+}
+
+.gate-card a {
+  color: #eaf2ef;
+  text-underline-offset: 3px;
+}
+
+.gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.gate-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: transparent;
+  color: #eaf2ef;
+  font: 500 14.5px/1 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.gate-btn:hover {
+  border-color: rgba(var(--brand-rgb), 0.7);
+}
+
+.gate-btn--primary {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #03110d;
+}
+
+.gate-btn:focus-visible {
+  outline: 2px solid var(--brand-hi);
+  outline-offset: 3px;
+}

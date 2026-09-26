@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from app.profiles.base import ActionSpec, Profile, ToolSpec
+from app.voice_context import VoiceSessionContext
 
 
 @dataclass(frozen=True)
@@ -74,6 +75,9 @@ class BrainContext:
     outbound: OutboundBrief | None = None
     # The persona with the real customer's name in it. Defaults to the profile's.
     persona: str | None = None
+    # Present on an automated call made for an organization's agent and contact: who the agent is and why it
+    # is calling. Then `tools` is only the context tool and `data` is the call's own data, not the profile's.
+    domain: VoiceSessionContext | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import VoiceOrb from "../voice/VoiceOrb";
 import { login } from "../../runtime/auth.js";
 
 export default function Login({ onSignedIn }) {
@@ -32,6 +33,10 @@ export default function Login({ onSignedIn }) {
       </header>
 
       <main className="callee-card">
+        <div className="login-orb">
+          <VoiceOrb state="idle" icon="agent" label="Ready to take calls" size="sm" />
+        </div>
+
         <h2>Sign in</h2>
         <p className="callee-note">Operators only. Ask an administrator for an account.</p>
 

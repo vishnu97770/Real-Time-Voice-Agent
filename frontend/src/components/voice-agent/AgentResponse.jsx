@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import RealtimeSignal from "../voice/RealtimeSignal";
 
 function ToolCall({ call }) {
   const args = Object.entries(call.args ?? {})
@@ -32,6 +33,10 @@ export default function AgentResponse({
   const endRef = useRef(null);
 
   useEffect(() => {
+    // With nothing to show there is nothing to scroll to, and scrollIntoView moves the whole page,
+    // which on first load hid the top bar (and with it the profile menu) behind the fold.
+    if (messages.length === 0 && !pending) return;
+
     endRef.current?.scrollIntoView({ block: "end" });
   }, [messages, pending]);
 
@@ -52,7 +57,7 @@ export default function AgentResponse({
 
       {status && (
         <div className="live-status" role="status">
-          <span className="online-dot" />
+          <RealtimeSignal tone="accent" className="live-signal" />
           {status}
         </div>
       )}

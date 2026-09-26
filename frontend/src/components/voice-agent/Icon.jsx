@@ -122,6 +122,81 @@ const icons = {
     </>
   ),
 
+  workflow: (
+    <>
+      <rect x="3" y="4" width="7" height="5" rx="1.5" />
+      <rect x="14" y="4" width="7" height="5" rx="1.5" />
+      <rect x="8.5" y="15" width="7" height="5" rx="1.5" />
+      <path d="M6.5 9v3h11V9M12 12v3" />
+    </>
+  ),
+
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.2-4.2" />
+    </>
+  ),
+
+  plus: <path d="M12 5v14M5 12h14" />,
+
+  grid: (
+    <>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.6" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.6" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.6" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.6" />
+    </>
+  ),
+
+  users: (
+    <>
+      <circle cx="9" cy="8.5" r="3.2" />
+      <path d="M3 19.5c.5-3.3 2.9-5.2 6-5.2s5.5 1.9 6 5.2M16.5 5.8a3 3 0 0 1 0 5.4M18.5 14.6c1.6.7 2.6 2.2 2.9 4.5" />
+    </>
+  ),
+
+  pause: <path d="M8 5v14M16 5v14" />,
+
+  play: <path d="M7 4.5v15l12-7.5z" />,
+
+  edit: <path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />,
+
+  trash: <path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13M10 11v6M14 11v6" />,
+
+  arrowLeft: <path d="M19 12H5M11 6l-6 6 6 6" />,
+
+  refresh: <path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5" />,
+
+  alert: (
+    <>
+      <path d="M12 3.5 2.8 19.5h18.4z" />
+      <path d="M12 10v4.5M12 17.4v.1" />
+    </>
+  ),
+
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5.5M12 7.6v.1" />
+    </>
+  ),
+
+  rocket: (
+    <>
+      <path d="M12 3c3.5 2 5.5 5.5 5.5 9.5L12 18l-5.5-5.5C6.5 8.5 8.5 5 12 3z" />
+      <circle cx="12" cy="10" r="1.6" />
+      <path d="M8.5 15.5 6 18.5l3-1M15.5 15.5l2.5 3-3-1" />
+    </>
+  ),
+
+  copy: (
+    <>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+      <path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5" />
+    </>
+  ),
+
   chart: (
     <>
       <path d="M4 20h16" />

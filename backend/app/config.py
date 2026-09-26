@@ -1,11 +1,18 @@
 from functools import lru_cache
+from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", populate_by_name=True)
+
+    app_name: str = "Real-Time Voice Agent"
+    app_env: str = "development"  # development | staging | production
+    # Development aid: unhandled errors render a traceback page. Never honoured in production.
+    debug: bool = False
+    log_level: str = "INFO"
 
     # Server-side only. The key never goes to the browser.
     gemini_api_key: str | None = None
@@ -19,8 +26,9 @@ class Settings(BaseSettings):
     # The Vite dev server proxies /api, so CORS only matters for other origins.
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
-    # Persistence. SQLite by default; any SQLAlchemy URL works (e.g. Postgres).
-    database_url: str = "sqlite:///./voice_agent.db"
+    # Persistence. Required, so a missing value fails loudly instead of quietly using another
+    # database. PostgreSQL: postgresql+psycopg://user:password@host:5432/dbname
+    database_url: str
 
     # Outbound calling. The business API is closed until an API key is set.
     api_key: str | None = Field(default=None, validation_alias="VOICE_AGENT_API_KEY")
@@ -31,6 +39,14 @@ class Settings(BaseSettings):
     callback_attempts: int = 3
     callback_backoff_seconds: float = 2.0
     sweep_interval_seconds: float = 5.0
+    # The workflow scheduler: every interval it runs the active workflows and then places the calls
+    # that are due. OFF by default, because switching it on lets this process ring people unprompted.
+    # Enable it on exactly the processes that should do so (several may: see README).
+    workflow_scheduler_enabled: bool = False
+    # A polling interval, not a trigger system: never faster than once a minute.
+    workflow_scheduler_interval_seconds: float = Field(default=60.0, ge=60.0)
+    workflow_scheduler_workflow_limit: int = Field(default=100, ge=1)  # active workflows run per tick
+    workflow_scheduler_dispatch_limit: int = Field(default=100, ge=1)  # scheduled jobs looked at per tick
     call_idle_timeout_seconds: int = 120
 
     # Operator sign-in. On by default: the console and its call endpoints need a login.
@@ -65,6 +81,21 @@ class Settings(BaseSettings):
     deepgram_utterance_end_ms: int = 1000
     # The caller must say this many words over the agent to cut it off.
     barge_in_min_words: int = 2
+    # Which voice runtime conducts a phone call, chosen once when the call starts. "legacy" is the runtime in
+    # production use; "pipecat" is opt-in (see app/pipecat_runtime). With "pipecat", the agent ids below (comma
+    # separated) limit it to those agents' calls; empty means every call. Anything else stays on legacy.
+    voice_runtime: Literal["legacy", "pipecat"] = "legacy"
+    voice_runtime_pipecat_agent_ids: str = ""
+    # Experimental, and only with voice_runtime "pipecat": "observe" runs Pipecat's Silero VAD alongside a call and records
+    # when speech started and stopped. It is observation only: it does not affect turn detection, interruptions or
+    # anything else the call does. "off" (the default) creates no VAD at all.
+    # "interrupt" also wires VAD's speech-started signal into SessionProcessor as an accepted, inert diagnostic hint:
+    # it never itself interrupts, clears playback or calls process_turn (see app/pipecat_runtime/session_processor.py).
+    voice_pipecat_vad: Literal["off", "observe", "interrupt"] = "off"
+    # Which recognizer a Pipecat call uses: "compat" wraps the existing Deepgram Listener (the reference behavior,
+    # unchanged since Step 10); "native" uses Pipecat's own DeepgramSTTService, configured to match it as closely
+    # as that service allows (see app/pipecat_runtime/native_stt.py). Experimental; off (compat) by default.
+    voice_pipecat_stt: Literal["compat", "native"] = "compat"
     # Off by default: caller ID proves nothing, and inbound calls have no identity
     # check, so an open phone line would hand demo data to anyone who rings.
     twilio_inbound_enabled: bool = False
@@ -72,6 +103,20 @@ class Settings(BaseSettings):
 
     max_sessions: int = 200
     session_ttl_seconds: int = 3600
+
+    @field_validator("voice_runtime_pipecat_agent_ids")
+    @classmethod
+    def _agent_ids_are_integers(cls, value: str) -> str:
+        pipecat_agent_ids(value)  # a typo must fail at startup, not silently select nothing
+        return value
+
+
+def pipecat_agent_ids(value: str) -> frozenset[int]:
+    """"3, 7" -> {3, 7}. Blank entries are ignored; anything that is not a whole number is an error."""
+    try:
+        return frozenset(int(item) for item in value.split(",") if item.strip())
+    except ValueError:
+        raise ValueError("VOICE_RUNTIME_PIPECAT_AGENT_IDS must be a comma-separated list of agent ids (whole numbers)") from None
 
 
 def telephony_configured(settings: Settings) -> bool:

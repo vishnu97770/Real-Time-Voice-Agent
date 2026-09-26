@@ -1,6 +1,7 @@
 import asyncio
 import hmac
 import json
+import logging
 import math
 import time
 from collections.abc import AsyncIterator
@@ -12,20 +13,28 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Path, Query, Reques
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import OperationalError
 
 from app.auth import COOKIE, Auth, public_user
 from app.brains import build_brain
 from app.brains.base import Brain
 from app.config import Settings, get_settings
 from app.db import Repository
+from app.errors import register_error_handlers
+from app.health import router as health_router
+from app.logging_setup import configure_logging
 from app.outbound import CallJobRequest
 from app.profiles import PROFILES
+from app.schemas import AgentCreate, AgentUpdate, ContactCreate, ContactUpdate, WorkflowCreate, WorkflowUpdate
 from app.security import RateLimiter, hash_token
 from app.service import Conflict, NotFound, Service, Unavailable
 from app.session import mark_playback_interrupted, process_turn
 from app.store import SessionStore, TooManySessions
 from app.telephony import Telephony, build_telephony
 from app.telephony.routes import register as register_telephony
+from app.workflows import JobDispatcher, SchedulerConfig, WorkflowEngine, WorkflowScheduler
+
+log = logging.getLogger("voice_agent")
 
 
 class StartCall(BaseModel):
@@ -68,6 +77,7 @@ def create_app(
 ) -> FastAPI:
     """Everything but `settings` is injectable, for tests."""
     settings = settings or get_settings()
+    configure_logging(settings.log_level)
     brain = brain if brain is not None else build_brain(settings)
     repo = repo or Repository(settings.database_url)
     http = http or httpx.AsyncClient()
@@ -83,28 +93,66 @@ def create_app(
         telephony=telephony,
     )
 
+    # Only when switched on: a scheduler makes this process ring people, so it never starts by accident.
+    scheduler = (
+        WorkflowScheduler(WorkflowEngine(service), JobDispatcher(service), SchedulerConfig.from_settings(settings))
+        if settings.workflow_scheduler_enabled
+        else None
+    )
+
     async def housekeeping() -> None:
         while True:
             await asyncio.sleep(60)
             limiter.prune()
-            await asyncio.to_thread(repo.purge_expired_sessions, time.time())
+
+            try:
+                await asyncio.to_thread(repo.purge_expired_sessions, time.time())
+            except OperationalError as error:  # an outage must not end this task for good
+                log.warning("housekeeping skipped, database unavailable (%s)", type(error.orig).__name__)
+            except Exception:
+                log.exception("housekeeping failed")
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        await service.resume_callbacks()
+        try:
+            if not await asyncio.to_thread(repo.migrated):
+                log.warning("The database has not been migrated: run `alembic upgrade head`")
+
+            await service.resume_callbacks()
+        except OperationalError as error:  # the API should still come up; a restart resumes them
+            log.error(
+                "Could not resume pending callbacks; restart once the database is reachable (%s)",
+                type(error.orig).__name__,
+            )
+
         sweeper = asyncio.create_task(service.run_sweeper())
         cleaner = asyncio.create_task(housekeeping())
 
+        if scheduler:
+            scheduler.start()
+
         yield
+
+        if scheduler:  # first: a tick in flight may still be creating jobs, dialing and sending callbacks
+            await scheduler.stop()
 
         sweeper.cancel()
         cleaner.cancel()
         await service.drain()
         await service.http.aclose()
 
-    app = FastAPI(title="Real-Time Voice Agent", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(
+        title=settings.app_name,
+        version="0.2.0",
+        lifespan=lifespan,
+        # Starlette's debug mode renders tracebacks and bypasses the error handlers.
+        debug=settings.debug and settings.app_env != "production",
+    )
     app.state.service = service
     app.state.auth = auth
+    app.state.scheduler = scheduler  # None unless WORKFLOW_SCHEDULER_ENABLED
+    register_error_handlers(app)
+    app.include_router(health_router)
 
     if telephony is not None:
         register_telephony(app, service, telephony)
@@ -144,7 +192,7 @@ def create_app(
             return user
 
         if not settings.auth_required:
-            return {"id": 0, "email": "anonymous", "role": "admin"}
+            return {"id": 0, "email": "anonymous", "role": "admin", "organization_id": None}
 
         raise HTTPException(401, "Sign in required")
 
@@ -337,6 +385,136 @@ def create_app(
             raise translate(error) from None
 
         return Response(status_code=204)
+
+    # --- organizations and agents (an operator's own tenant only; read-only for organizations) ---
+
+    @app.get("/api/organizations")
+    async def list_organizations(user: Annotated[dict, Depends(operator)]) -> list[dict[str, Any]]:
+        return await service.list_organizations(user["organization_id"])
+
+    @app.get("/api/organizations/{organization_id}")
+    async def get_organization(organization_id: int, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.get_organization(organization_id, user["organization_id"])
+        except NotFound as error:
+            raise translate(error) from None
+
+    @app.get("/api/agents")
+    async def list_agents(user: Annotated[dict, Depends(operator)]) -> list[dict[str, Any]]:
+        return await service.list_agents(user["organization_id"])
+
+    @app.get("/api/agents/{agent_id}")
+    async def get_agent(agent_id: int, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.get_agent(agent_id, user["organization_id"])
+        except NotFound as error:
+            raise translate(error) from None
+
+    @app.post("/api/agents", status_code=201)
+    async def create_agent(request: AgentCreate, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.create_agent(user["organization_id"], request)
+        except Conflict as error:
+            raise translate(error) from None
+
+    @app.put("/api/agents/{agent_id}")
+    async def update_agent(agent_id: int, request: AgentUpdate, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.update_agent(agent_id, user["organization_id"], request)
+        except (NotFound, Conflict) as error:
+            raise translate(error) from None
+
+    # --- contacts (an operator's own tenant only; distinct from /api/customers, the legacy demo
+    # data below - see the Step 18C report for why the two are kept separate) ---------------------
+
+    @app.get("/api/contacts")
+    async def list_contacts(user: Annotated[dict, Depends(operator)]) -> list[dict[str, Any]]:
+        return await service.list_contacts(user["organization_id"])
+
+    @app.get("/api/contacts/{contact_id}")
+    async def get_contact(contact_id: int, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.get_contact(contact_id, user["organization_id"])
+        except NotFound as error:
+            raise translate(error) from None
+
+    @app.post("/api/contacts", status_code=201)
+    async def create_contact(request: ContactCreate, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.create_contact(user["organization_id"], request)
+        except Conflict as error:
+            raise translate(error) from None
+
+    @app.put("/api/contacts/{contact_id}")
+    async def update_contact(contact_id: int, request: ContactUpdate, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.update_contact(contact_id, user["organization_id"], request)
+        except NotFound as error:
+            raise translate(error) from None
+
+    @app.delete("/api/contacts/{contact_id}", status_code=204)
+    async def delete_contact(contact_id: int, user: Annotated[dict, Depends(operator)]) -> Response:
+        try:
+            await service.delete_contact(contact_id, user["organization_id"])
+        except (NotFound, Conflict) as error:
+            raise translate(error) from None
+
+        return Response(status_code=204)
+
+    # --- workflows (an operator's own tenant only) --------------------------------------------
+
+    @app.get("/api/workflows")
+    async def list_workflows(user: Annotated[dict, Depends(operator)]) -> list[dict[str, Any]]:
+        return await service.list_workflows(user["organization_id"])
+
+    @app.get("/api/workflows/{workflow_id}")
+    async def get_workflow(workflow_id: int, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.get_workflow(workflow_id, user["organization_id"])
+        except NotFound as error:
+            raise translate(error) from None
+
+    @app.post("/api/workflows", status_code=201)
+    async def create_workflow(request: WorkflowCreate, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.create_workflow(user["organization_id"], request)
+        except (ValueError, Conflict) as error:
+            raise translate(error) from None
+
+    @app.put("/api/workflows/{workflow_id}")
+    async def update_workflow(workflow_id: int, request: WorkflowUpdate, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.update_workflow(workflow_id, user["organization_id"], request)
+        except (NotFound, ValueError, Conflict) as error:
+            raise translate(error) from None
+
+    @app.delete("/api/workflows/{workflow_id}", status_code=204)
+    async def delete_workflow(workflow_id: int, user: Annotated[dict, Depends(operator)]) -> Response:
+        try:
+            await service.delete_workflow(workflow_id, user["organization_id"])
+        except (NotFound, Conflict) as error:
+            raise translate(error) from None
+
+        return Response(status_code=204)
+
+    # --- workflow eligibility + manual trigger (Step 18E: both reuse WorkflowEngine, see
+    # app/service.py's check_workflow_eligibility/trigger_workflow - nothing here duplicates it) ---
+
+    @app.post("/api/workflows/{workflow_id}/contacts/{contact_id}/eligibility")
+    async def workflow_eligibility(
+        workflow_id: int, contact_id: int, user: Annotated[dict, Depends(operator)]
+    ) -> dict[str, Any]:
+        try:
+            return await service.check_workflow_eligibility(workflow_id, contact_id, user["organization_id"])
+        except NotFound as error:
+            raise translate(error) from None
+
+    @app.post("/api/workflows/{workflow_id}/contacts/{contact_id}/trigger")
+    async def workflow_trigger(workflow_id: int, contact_id: int, user: Annotated[dict, Depends(operator)]) -> dict[str, Any]:
+        try:
+            return await service.trigger_workflow(workflow_id, contact_id, user["organization_id"])
+        except NotFound as error:
+            raise translate(error) from None
 
     # --- outbound: the business side (API key) -----------------------------
 

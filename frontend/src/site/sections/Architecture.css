@@ -1,0 +1,231 @@
+.arch {
+  position: relative;
+  padding: clamp(90px, 14vh, 170px) 0;
+}
+
+.arch-head {
+  display: grid;
+  gap: 22px;
+  justify-items: start;
+  margin-bottom: clamp(36px, 7vh, 80px);
+}
+
+.arch-stage {
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 1200 / 580;
+}
+
+.arch-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.arch-track {
+  fill: none;
+  stroke: var(--lp-line-2);
+  stroke-width: 1.2;
+}
+
+/* dashes drifting along the track: the "data is moving" texture under the pulses */
+.arch-flow {
+  fill: none;
+  stroke: rgba(var(--brand-rgb), 0.55);
+  stroke-width: 1.6;
+  stroke-dasharray: 2 16;
+  stroke-linecap: round;
+  animation: arch-dash 5s linear infinite;
+}
+
+@keyframes arch-dash {
+  to { stroke-dashoffset: -180; }
+}
+
+.arch-pulse {
+  fill: var(--lp-accent-hi);
+  filter: drop-shadow(0 0 7px rgba(var(--brand-rgb), 1)) drop-shadow(0 0 16px rgba(var(--brand-rgb), 0.8));
+}
+
+.arch-node {
+  --g: 0;
+
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lp-muted);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+/* top-row labels sit above their nodes, so they stay clear of the orb in the middle */
+.arch-node.is-top {
+  flex-direction: column-reverse;
+}
+
+.arch-dot {
+  display: grid;
+  place-items: center;
+  width: clamp(38px, 5.2cqw, 60px);
+  height: clamp(38px, 5.2cqw, 60px);
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--lp-accent) calc(var(--g) * 100%), var(--lp-line-2));
+  background: color-mix(in srgb, var(--lp-accent) calc(var(--g) * 100%), var(--lp-bg));
+  color: color-mix(in srgb, #03110d calc(var(--g) * 100%), var(--lp-muted));
+  box-shadow: 0 0 calc(var(--g) * 34px) rgba(var(--brand-rgb), calc(var(--g) * 0.9));
+}
+
+.arch-node b {
+  max-width: 13ch;
+  font: 500 clamp(9px, 1.05cqw, 12px) / 1.3 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--lp-text) calc(var(--g) * 100%), var(--lp-muted));
+}
+
+.arch-node.is-shown .arch-dot {
+  outline: 1px solid rgba(var(--brand-rgb), 0.6);
+  outline-offset: 5px;
+}
+
+/* the middle of the loop: the orb, and what the current stage does */
+.arch-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  justify-items: center;
+  gap: clamp(8px, 1.6cqw, 22px);
+  width: 46%;
+  transform: translate(-50%, -48%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.arch-orb {
+  width: clamp(70px, 11cqw, 140px);
+}
+
+.arch-core p {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  max-width: 44ch;
+  min-height: 5.4em;
+}
+
+.arch-core p b {
+  font: 500 clamp(10px, 1.1cqw, 12px) / 1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lp-accent-hi);
+}
+
+.arch-core p span {
+  font-size: clamp(11.5px, 1.35cqw, 15px);
+  line-height: 1.5;
+  color: var(--lp-muted);
+}
+
+.arch-list {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ small screens: the same loop, as a list */
+
+@media (max-width: 860px) {
+  .arch-stage {
+    display: none;
+  }
+
+  .arch-list {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0 0 0 4px;
+    list-style: none;
+  }
+
+  .arch-list::before {
+    content: "";
+    position: absolute;
+    left: 24px;
+    top: 24px;
+    bottom: 24px;
+    width: 1px;
+    background: var(--lp-line-2);
+  }
+
+  .arch-list::after {
+    content: "";
+    position: absolute;
+    left: 21.5px;
+    top: 24px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lp-accent-hi);
+    box-shadow: 0 0 14px var(--lp-accent);
+    animation: list-pulse 5s linear infinite;
+  }
+
+  @keyframes list-pulse {
+    from { transform: translateY(0); opacity: 0; }
+    10%, 90% { opacity: 1; }
+    to { transform: translateY(calc(100cqh)); opacity: 0; }
+  }
+
+  .arch-list li {
+    position: relative;
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    grid-template-areas: "icon title" "icon note";
+    column-gap: 18px;
+    row-gap: 3px;
+    padding: 12px 0;
+  }
+
+  .arch-list li span {
+    grid-area: icon;
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--lp-line-2);
+    background: var(--lp-bg);
+    color: var(--lp-accent-hi);
+  }
+
+  .arch-list b {
+    grid-area: title;
+    align-self: end;
+    font: 500 12px/1.2 var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .arch-list em {
+    grid-area: note;
+    font-size: 14px;
+    font-style: normal;
+    line-height: 1.5;
+    color: var(--lp-muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arch-flow,
+  .arch-list::after {
+    animation: none;
+  }
+}

@@ -71,7 +71,7 @@ async def bank_outbound(ctx):
 
 
 class World:
-    def __init__(self, inbound=False, configured=True, twilio=None):
+    def __init__(self, inbound=False, configured=True, twilio=None, voice_runtime="legacy"):
         self.repo = Repository("sqlite://")
         self.receiver = Receiver()
         self.twilio = twilio or FakeTwilio()
@@ -83,7 +83,7 @@ class World:
 
         telephony = Telephony(
             twilio=self.twilio, open_listener=open_listener, speaker=FakeSpeaker(), public_api_url=PUBLIC,
-            auth_token=TOKEN, barge_in_min_words=2, inbound_enabled=inbound, inbound_profile="bank",
+            auth_token=TOKEN, barge_in_min_words=2, inbound_enabled=inbound, inbound_profile="bank", voice_runtime=voice_runtime,
         ) if configured else None
         settings = Settings(
             database_url="sqlite://", api_key="test-key", auth_required=False, allow_private_callbacks=True,
